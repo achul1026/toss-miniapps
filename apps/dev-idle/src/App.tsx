@@ -181,20 +181,24 @@ function Office() {
   const { s, offline, dismissOffline, doubleOffline, offlineDoubled, perkX, seeTips } = useGame();
   const ad = useAdReady();
   const [tab, setTab] = useState<Tab>('hire');
-  const [open, setOpenRaw] = useState(() => {
-    try {
-      return window.localStorage.getItem('dev-idle:panel') === 'open';
-    } catch {
-      return false;
+  // 업그레이드 화면: 아래에서 올라오는 전체 화면. 뒤로가기(토스·안드로이드)로도 닫힌다.
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onPop = () => setOpen(false);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const openSheet = (id: Tab) => {
+    setTab(id);
+    if (!open) {
+      window.history.pushState({ sheet: true }, '');
+      setOpen(true);
     }
-  });
-  const setOpen = (v: boolean) => {
-    setOpenRaw(v);
-    try {
-      window.localStorage.setItem('dev-idle:panel', v ? 'open' : 'closed');
-    } catch {
-      /* 저장 불가 */
-    }
+    if (id === 'resign' && tip?.id === 'resign') seeTips(['resign']);
+  };
+  const closeSheet = () => {
+    if ((window.history.state as { sheet?: boolean } | null)?.sheet) window.history.back();
+    else setOpen(false);
   };
   const [tip, okTip] = useTip();
   useSounds();
@@ -286,51 +290,61 @@ function Office() {
         자동으로 초당 {won(linesPerSec(s) * perkX())}줄 · 누르면 한 번에 {won(linesPerTap(s) * perkX())}줄
       </p>
 
-      {tip && tip.target !== 'scene' && <Coach tip={tip} onOk={okTip} />}
-      <nav className="tabs" role="tablist">
-        {TABS.map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={open && tab === id}
-            aria-expanded={open && tab === id}
-            className={`tab${open && tab === id ? ' on' : ''}${tip?.target === id && !(open && tab === id) ? ' hint' : ''}`}
-            onClick={() => {
-              // 열린 탭을 다시 누르면 접는다
-              if (open && tab === id) setOpen(false);
-              else {
-                setTab(id);
-                setOpen(true);
-              }
-              if (id === 'resign' && tip?.id === 'resign') seeTips(['resign']);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-        <button className="tab fold" aria-label={open ? '목록 접기' : '목록 펼치기'} aria-expanded={open} onClick={() => setOpen(!open)}>
-          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shapeRendering="crispEdges">
-            <path d={open ? 'M3 10l5-5 5 5-1.5 1.5L8 8l-3.5 3.5z' : 'M3 6l5 5 5-5-1.5-1.5L8 8 4.5 4.5z'} fill="currentColor" />
-          </svg>
-        </button>
-      </nav>
-      {open && tab === 'hire' && <HireList />}
-      {open && tab === 'gear' && <GearList />}
-      {open && tab === 'resign' && <Resign />}
-      {open && tab === 'shop' && <Shop />}
+      <div className="bottom">
+        {tip && tip.target !== 'scene' && <Coach tip={tip} onOk={okTip} />}
+        <nav className="tabs" aria-label="업그레이드">
+          {TABS.map(([id, label]) => (
+            <button key={id} className={`tab${tip?.target === id ? ' hint' : ''}`} onClick={() => openSheet(id)}>
+              {label}
+            </button>
+          ))}
+        </nav>
+        {import.meta.env.VITE_GAME_RATING && (
+          <p className="rating">
+            {import.meta.env.VITE_GAME_RATING}
+            {import.meta.env.VITE_GAME_RATING_NO ? ` · 등급분류번호 ${import.meta.env.VITE_GAME_RATING_NO}` : ''}
+          </p>
+        )}
+      </div>
 
-      {import.meta.env.VITE_GAME_RATING && (
-        <p className="rating">
-          {import.meta.env.VITE_GAME_RATING}
-          {import.meta.env.VITE_GAME_RATING_NO ? ` · 등급분류번호 ${import.meta.env.VITE_GAME_RATING_NO}` : ''}
-        </p>
-      )}
+      {open && <Sheet tab={tab} setTab={(id) => openSheet(id)} onClose={closeSheet} />}
 
       {promoted && (
         <div className="toast" role="status">
           {promoted}
         </div>
       )}
+    </div>
+  );
+}
+
+function Sheet({ tab, setTab, onClose }: { tab: Tab; setTab: (t: Tab) => void; onClose: () => void }) {
+  const fee = useGame((g) => g.s.fee);
+  return (
+    <div className="sheet" role="dialog" aria-modal="true" aria-label="업그레이드">
+      <div className="sheet-head">
+        <p className="sheet-money">
+          용역비 <strong>{won(fee)}원</strong>
+        </p>
+        <button className="sheet-close" aria-label="닫기" onClick={onClose}>
+          <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+            <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+      <nav className="tabs" role="tablist">
+        {TABS.map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'tab on' : 'tab'} onClick={() => setTab(id)}>
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="sheet-body">
+        {tab === 'hire' && <HireList />}
+        {tab === 'gear' && <GearList />}
+        {tab === 'resign' && <Resign />}
+        {tab === 'shop' && <Shop />}
+      </div>
     </div>
   );
 }
