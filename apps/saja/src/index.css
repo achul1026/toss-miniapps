@@ -23,7 +23,7 @@
   -webkit-text-size-adjust: 100%;
 }
 * { box-sizing: border-box; }
-body { margin: 0; }
+body { margin: 0; touch-action: manipulation; }
 p { margin: 0; }
 button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
 :focus-visible { outline: 3px solid var(--celadon); outline-offset: 3px; border-radius: 6px; }
@@ -95,7 +95,6 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .primary:active { filter: brightness(0.92); }
 .quiet { color: var(--celadon); font-weight: 700; font-size: 19px; min-height: 56px; border-radius: 14px; background: var(--celadon-wash); }
 .quiet:disabled { opacity: 0.55; }
-.back { align-self: flex-start; color: var(--ink-soft); font-size: 18px; min-height: 44px; }
 
 /* 배우기 */
 .learn-head { display: flex; flex-direction: column; gap: 4px; }
@@ -131,7 +130,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 /* 결과 */
 .result { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px 0 8px; text-align: center; }
 .result .score { font-size: 24px; font-weight: 800; }
-.result .note { color: var(--ink-soft); }
+.result .note { color: var(--ink-soft); word-break: keep-all; }
 
 /* 기록 */
 .h2 { font-size: 22px; font-weight: 800; margin: 8px 0 0; }
@@ -146,7 +145,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .wrong-row p { color: var(--ink-soft); font-size: 17px; word-break: keep-all; }
 .small { color: var(--celadon); font-weight: 700; font-size: 16px; padding: 10px 12px; min-height: 44px; white-space: nowrap; }
 .empty { color: var(--ink-soft); }
-.banner { width: 100%; margin-top: 40px; } /* 버튼과 충분히 떨어뜨린다 */
+.banner { width: 100%; } /* 학습 화면 본문 중간. 버튼과 떨어뜨린다 */
 
 /* 알림 제안 */
 .reminder { display: flex; flex-direction: column; gap: 6px; padding: 18px 0 4px; border-top: 1px solid var(--line); }

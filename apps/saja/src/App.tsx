@@ -15,21 +15,53 @@ type Screen =
 export default function App() {
   const { ready, init } = useApp();
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
+  const depth = useRef(0);
+
   useEffect(() => {
     init();
   }, [init]);
+
+  // 토스·안드로이드 뒤로 가기 버튼으로 화면을 이동한다 (자체 뒤로 가기 버튼은 두지 않는다).
+  // 홈에서 뒤로 가기를 누르면 쌓인 기록이 없으므로 미니앱이 닫힌다.
+  useEffect(() => {
+    const onPop = () => {
+      depth.current = Math.max(0, depth.current - 1);
+      setScreen({ name: 'home' });
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const go: Go = (s) => {
+    window.scrollTo(0, 0);
+    if (s.name === 'home') {
+      if (depth.current > 0) {
+        const n = depth.current;
+        depth.current = 0;
+        history.go(-n);
+      }
+      setScreen(s);
+      return;
+    }
+    if (depth.current === 0) {
+      history.pushState({ saja: true }, '');
+      depth.current = 1;
+    }
+    setScreen(s);
+  };
+
   if (!ready) return <div className="page center">불러오는 중…</div>;
   switch (screen.name) {
     case 'home':
-      return <Home go={setScreen} />;
+      return <Home go={go} />;
     case 'learn':
-      return <Learn go={setScreen} />;
+      return <Learn go={go} />;
     case 'quiz':
-      return <Quiz key={String(screen.review)} questions={screen.questions} review={screen.review} go={setScreen} />;
+      return <Quiz key={String(screen.review)} questions={screen.questions} review={screen.review} go={go} />;
     case 'result':
-      return <Result {...screen} go={setScreen} />;
+      return <Result {...screen} go={go} />;
     case 'records':
-      return <Records go={setScreen} />;
+      return <Records go={go} />;
   }
 }
 
@@ -92,12 +124,12 @@ function Home({ go }: { go: Go }) {
 
 function Learn({ go }: { go: Go }) {
   const { idiom, today } = useApp();
+  const banner = useRef<HTMLDivElement>(null);
+  const [bannerEmpty, setBannerEmpty] = useState(false);
+  useEffect(() => (banner.current ? attachBanner(banner.current, () => setBannerEmpty(true)) : undefined), []);
   const questions = useMemo(() => buildQuiz(idiom, IDIOMS, dayNumber(today)), [idiom, today]);
   return (
     <div className="page">
-      <button className="back" onClick={() => go({ name: 'home' })}>
-        ‹ 처음으로
-      </button>
       <header className="learn-head">
         <p className="learn-hanja" lang="zh-Hant">
           {idiom.hanja}
@@ -115,6 +147,7 @@ function Learn({ go }: { go: Go }) {
           </li>
         ))}
       </ul>
+      {!bannerEmpty && <div ref={banner} className="banner" aria-label="광고" />}
       <section className="section">
         <h2>어디서 온 말일까</h2>
         <p>{idiom.story}</p>
@@ -195,8 +228,6 @@ function Quiz({ questions, review, go }: { questions: Question[]; review: boolea
 
 function Result({ correct, total, review, go }: { correct: number; total: number; review: boolean; go: Go }) {
   const { saved, today, streakNow, setReminder } = useApp();
-  const banner = useRef<HTMLDivElement>(null);
-  const [bannerEmpty, setBannerEmpty] = useState(false);
   const [adReady, setAdReady] = useState(false);
   const [adBusy, setAdBusy] = useState(false);
   const learned = IDIOMS.filter((i) => saved.learned.includes(i.id));
@@ -205,7 +236,6 @@ function Result({ correct, total, review, go }: { correct: number; total: number
 
   // 리워드 광고는 화면에 들어올 때 미리 불러둔다
   useEffect(() => (offerBonus ? preloadRewarded(setAdReady) : undefined), [offerBonus]);
-  useEffect(() => (banner.current ? attachBanner(banner.current, () => setBannerEmpty(true)) : undefined), []);
 
   const bonus = async () => {
     setAdBusy(true);
@@ -247,12 +277,11 @@ function Result({ correct, total, review, go }: { correct: number; total: number
       <button className="primary" onClick={() => go({ name: 'home' })}>
         처음으로
       </button>
-      {!bannerEmpty && <div ref={banner} className="banner" />}
     </div>
   );
 }
 
-function Records({ go }: { go: Go }) {
+function Records(_props: { go: Go }) {
   const { saved, today, clearWrong } = useApp();
   // 오늘이 속한 주의 토요일까지, 4주
   const dow = new Date(`${today}T00:00:00Z`).getUTCDay();
@@ -261,9 +290,6 @@ function Records({ go }: { go: Go }) {
   const wrong = IDIOMS.filter((i) => saved.wrong.includes(i.id));
   return (
     <div className="page">
-      <button className="back" onClick={() => go({ name: 'home' })}>
-        ‹ 처음으로
-      </button>
       <h1 className="h2">도장 찍은 날</h1>
       <div className="weekdays" aria-hidden="true">
         {WEEK.map((w) => (
