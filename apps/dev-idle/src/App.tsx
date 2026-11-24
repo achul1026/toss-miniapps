@@ -151,6 +151,8 @@ function Office() {
 
       <Office2 />
 
+      <EventCard />
+
       <p className="rates">
         탭 한 번에 {won(linesPerTap(s))}줄 · 팀이 초당 {won(linesPerSec(s))}줄
       </p>
@@ -198,6 +200,70 @@ function Office2() {
         {hidden > 0 ? ` · 다른 층에 ${hidden}명 더` : ''}
       </p>
     </section>
+  );
+}
+
+function EventCard() {
+  const { event, boost, notice, answerEvent, clearNotice } = useGame();
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(clearNotice, 2800);
+    return () => window.clearTimeout(t);
+  }, [notice, clearNotice]);
+
+  const left = event ? Math.ceil(event.left) : 0;
+  return (
+    <>
+      {notice && (
+        <div className="toast" role="status">
+          {notice}
+        </div>
+      )}
+      {boost && !event && (
+        <p className={boost.x > 1 ? 'boost up' : 'boost down'}>
+          {boost.reason === 'overtime' ? '야근 중' : '장애 여파'} · 생산량 ×{boost.x} · {Math.ceil(boost.left)}초
+        </p>
+      )}
+      {event && (
+        <section className={`event ev-${event.kind}`} role="alert">
+          {event.kind === 'outage' && (
+            <>
+              <p className="event-title">장애 발생! 버그를 눌러 잡아요</p>
+              <p className="event-desc">
+                남은 버그 {event.bugs.filter((b) => !b.done).length}마리 · {left}초
+              </p>
+            </>
+          )}
+          {event.kind === 'audit' && (
+            <>
+              <p className="event-title">감리 지적 사항이 붙었어요</p>
+              <p className="event-desc">
+                책상 위 분홍 포스트잇을 눌러 처리해요 · 남은 {event.notes.filter((n) => !n.done).length}건 · {left}초
+              </p>
+            </>
+          )}
+          {(event.kind === 'overtime' || event.kind === 'change') && (
+            <>
+              <p className="event-title">{event.kind === 'overtime' ? '오늘 야근할까요?' : '고객이 요구사항을 바꾸자고 해요'}</p>
+              <p className="event-desc">
+                {event.kind === 'overtime'
+                  ? '60초 동안 생산량이 2배가 돼요.'
+                  : '진척률이 30% 줄어드는 대신 추가 용역비를 받아요.'}{' '}
+                {left}초 안에 정해 주세요.
+              </p>
+              <div className="event-buttons">
+                <button className="secondary" onClick={() => answerEvent(false)}>
+                  {event.kind === 'overtime' ? '칼퇴할게요' : '거절할게요'}
+                </button>
+                <button className="primary" onClick={() => answerEvent(true)}>
+                  {event.kind === 'overtime' ? '야근할게요' : '받아들일게요'}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+    </>
   );
 }
 
