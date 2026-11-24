@@ -3,7 +3,7 @@ import { useApp } from './store';
 import { IDIOMS } from './data/idioms';
 import { buildQuiz, buildReview, type Question } from './lib/quiz';
 import { dayNumber, addDays } from './lib/daily';
-import { attachBanner, showRewardedAd } from './lib/platform';
+import { attachBanner, preloadRewarded, showRewarded } from './lib/platform';
 
 type Screen =
   | { name: 'home' }
@@ -196,13 +196,19 @@ function Quiz({ questions, review, go }: { questions: Question[]; review: boolea
 function Result({ correct, total, review, go }: { correct: number; total: number; review: boolean; go: Go }) {
   const { saved, today, streakNow } = useApp();
   const banner = useRef<HTMLDivElement>(null);
+  const [bannerEmpty, setBannerEmpty] = useState(false);
+  const [adReady, setAdReady] = useState(false);
   const [adBusy, setAdBusy] = useState(false);
-  useEffect(() => (banner.current ? attachBanner(banner.current) : undefined), []);
-
   const learned = IDIOMS.filter((i) => saved.learned.includes(i.id));
+  const offerBonus = !review && learned.length >= 2;
+
+  // 리워드 광고는 화면에 들어올 때 미리 불러둔다
+  useEffect(() => (offerBonus ? preloadRewarded(setAdReady) : undefined), [offerBonus]);
+  useEffect(() => (banner.current ? attachBanner(banner.current, () => setBannerEmpty(true)) : undefined), []);
+
   const bonus = async () => {
     setAdBusy(true);
-    const ok = await showRewardedAd();
+    const ok = await showRewarded();
     setAdBusy(false);
     if (ok) go({ name: 'quiz', questions: buildReview(learned, IDIOMS, dayNumber(today) + 7), review: true });
   };
@@ -216,15 +222,15 @@ function Result({ correct, total, review, go }: { correct: number; total: number
         </p>
         {!review && <p className="note">{streakNow()}일째 도장을 찍었어요. 내일 또 만나요.</p>}
       </div>
-      {!review && learned.length >= 2 && (
+      {offerBonus && adReady && (
         <button className="quiet" disabled={adBusy} onClick={bonus}>
-          {adBusy ? '광고를 불러오고 있어요' : '광고 보고 복습 3문제 더 풀기'}
+          {adBusy ? '광고를 보여주고 있어요' : '광고 보고 복습 3문제 더 풀기'}
         </button>
       )}
       <button className="primary" onClick={() => go({ name: 'home' })}>
         처음으로
       </button>
-      <div ref={banner} className="banner" />
+      {!bannerEmpty && <div ref={banner} className="banner" />}
     </div>
   );
 }

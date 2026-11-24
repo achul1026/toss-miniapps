@@ -146,4 +146,4 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .wrong-row p { color: var(--ink-soft); font-size: 17px; word-break: keep-all; }
 .small { color: var(--celadon); font-weight: 700; font-size: 16px; padding: 10px 12px; min-height: 44px; white-space: nowrap; }
 .empty { color: var(--ink-soft); }
-.banner:empty { display: none; }
+.banner { width: 100%; margin-top: 40px; } /* 버튼과 충분히 떨어뜨린다 */
