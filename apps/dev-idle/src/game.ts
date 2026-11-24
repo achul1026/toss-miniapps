@@ -42,6 +42,7 @@ interface Saved {
   perks?: Perks;
   granted?: string[]; // 지급 끝난 주문 번호 (중복 지급 방지)
   tips?: string[]; // 다 본 안내 말풍선
+  lifetime?: number; // 이직 포함 지금까지 납품한 프로젝트 수 (리더보드 점수)
 }
 
 async function load(): Promise<Saved | null> {
@@ -58,8 +59,8 @@ async function load(): Promise<Saved | null> {
   }
 }
 
-async function save(g: { s: State; perks: Perks; granted: string[]; tips: string[] }) {
-  const text = JSON.stringify({ state: g.s, savedAt: Date.now(), perks: g.perks, granted: g.granted.slice(-200), tips: g.tips } satisfies Saved);
+async function save(g: { s: State; perks: Perks; granted: string[]; tips: string[]; lifetime: number }) {
+  const text = JSON.stringify({ state: g.s, savedAt: Date.now(), perks: g.perks, granted: g.granted.slice(-200), tips: g.tips, lifetime: g.lifetime } satisfies Saved);
   try {
     await Storage.setItem(KEY, text);
   } catch {
@@ -111,6 +112,7 @@ interface Game {
   // 안내
   tips: string[];
   seeTips: (ids: string[]) => void;
+  lifetime: number;
 }
 
 export const useGame = create<Game>((set, get) => ({
@@ -126,6 +128,7 @@ export const useGame = create<Game>((set, get) => ({
   granted: [],
   offlineDoubled: false,
   tips: [],
+  lifetime: 0,
   seeTips: (ids) => {
     const tips = [...new Set([...get().tips, ...ids])];
     if (tips.length !== get().tips.length) set({ tips });
@@ -135,6 +138,8 @@ export const useGame = create<Game>((set, get) => ({
     const saved = await load();
     if (saved?.perks) set({ perks: saved.perks, granted: saved.granted ?? [] });
     if (saved?.tips) set({ tips: saved.tips });
+    // 예전 저장본에는 누적 기록이 없어서 지금 회사의 납품 수로 시작한다
+    if (saved) set({ lifetime: saved.lifetime ?? saved.state.delivered });
     // 지급 못 한 주문, 맥북 구매 내역 복원 (토스 앱에서만 동작)
     void recoverPending((sku, id) => get().grant(sku, id));
     void ownsMacbook().then((owns) => {
@@ -158,7 +163,7 @@ export const useGame = create<Game>((set, get) => ({
       };
       s = after;
     }
-    set({ s, offline, ready: true });
+    set({ s, offline, ready: true, lifetime: get().lifetime + (offline?.delivered ?? 0) });
   },
   tick: (dt) => {
     const g = get();
@@ -295,3 +300,10 @@ export const useGame = create<Game>((set, get) => ({
     });
   },
 }));
+
+// 납품할 때마다 누적 기록을 올린다 (이직으로 납품 수가 0이 되는 건 빼고)
+useGame.subscribe((g, prev) => {
+  if (!g.ready || !prev.ready) return;
+  const n = g.s.delivered - prev.s.delivered;
+  if (n > 0 && g.s.career === prev.s.career) useGame.setState({ lifetime: g.lifetime + n });
+});
