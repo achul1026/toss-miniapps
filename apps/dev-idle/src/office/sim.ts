@@ -17,6 +17,7 @@ export interface Agent {
   path: Point[];
   timer: number; // 현재 활동 남은 시간(초)
   facing: 1 | -1;
+  dir: 'down' | 'up' | 'side'; // 걷는 방향 (그림 선택용)
   spot: { kind: 'coffee' | 'sofa'; i: number } | null; // 잡아 둔 탕비실·소파 자리
 }
 
@@ -77,6 +78,7 @@ export function makeAgent(id: string, role: string, seat: Point, r: () => number
     path: [],
     timer: 8 + r() * 30, // 처음엔 일하는 시간을 흩어 놓는다
     facing: 1,
+    dir: 'down',
     spot: null,
   };
 }
@@ -119,6 +121,7 @@ export function step(agents: Agent[], dt: number, r: () => number) {
         const dy = t.y - a.pos.y;
         const d = Math.hypot(dx, dy);
         if (dx !== 0) a.facing = dx > 0 ? 1 : -1;
+        a.dir = Math.abs(dx) > Math.abs(dy) ? 'side' : dy < 0 ? 'up' : 'down';
         if (d <= budget) {
           a.pos = { ...t };
           a.path.shift();

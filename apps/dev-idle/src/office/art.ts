@@ -157,6 +157,9 @@ export function drawRoom(c: Ctx, night: boolean, alarm: boolean, t: number) {
   blit(c, COUNTER(), 126, 18);
   blit(c, RACK(alarm, Math.floor(t * 4) % 2 === 0), 2, 108);
   blit(c, PLANT(), 100, 120);
+  blit(c, COPIER(Math.floor(t * 2) % 6 === 0), 26, 121);
+  blit(c, BOXES(), 54, 127);
+  blit(c, BIN(), 80, 131);
 
   if (night) {
     c.fillStyle = 'rgba(22, 26, 52, 0.38)';
@@ -273,6 +276,52 @@ const PLANT = () =>
     { o: OUT, L: P.leaf, l: P.leafHi, d: P.leafDark, p: P.pot, P: P.potDark },
   );
 
+const COPIER = (busy: boolean) =>
+  sprite(
+    `copier-${busy}`,
+    [
+      '.oooooooooooooooo.',
+      'oAAAAAAAAAAAAAAAAo',
+      'oAkkkkkkkkkkkkkkAo',
+      'oooooooooooooooooo',
+      'ommmmmmmmmmmmmmmmo',
+      'ommgmmmmmmmmmmmmmo',
+      'omwwwwwwwwwwwwwwmo',
+      'oMMMMMMMMMMMMMMMMo',
+      'ommmmmmmmmmmmmmmmo',
+      'ommmmmmmmmmmmmmmmo',
+      'oMMMMMMMMMMMMMMMMo',
+      'oooooooooooooooooo',
+      '.oo............oo.',
+    ],
+    { o: OUT, A: '#e9ecf1', k: '#5b6475', m: P.metal, M: P.metalDark, g: busy ? P.ledOk : '#3f9a5c', w: P.white },
+  );
+
+const BOXES = () =>
+  sprite(
+    'boxes',
+    [
+      '..oooooooo....',
+      '..obbbbbbo....',
+      '..obttttbo....',
+      '..obbbbbbo....',
+      'oooooooooooooo',
+      'obbbbbobbbbbbo',
+      'obttttobbttbbo',
+      'obbbbbobbbbbbo',
+      'oBBBBBoBBBBBBo',
+      'oooooooooooooo',
+    ],
+    { o: OUT, b: '#d9a86c', B: '#b8864f', t: '#f0d9b0' },
+  );
+
+const BIN = () =>
+  sprite(
+    'bin',
+    ['oooooooo', 'oggggggo', 'oGwGGGGo', 'oGGGGwGo', 'oGGGGGGo', '.oooooo.'],
+    { o: OUT, g: '#9fb0a8', G: '#7f928a', w: P.white },
+  );
+
 /* 책상: 비스듬히 위에서 본 책상과 모니터. (x, y)는 책상 상판 왼쪽 위 */
 const DESK = () =>
   sprite(
@@ -337,7 +386,7 @@ const CHAIR = () =>
     { o: OUT, C: '#4a5470', c: '#5d6987', M: P.metalDark },
   );
 
-export function drawDesk(c: Ctx, x: number, y: number, working: boolean, night: boolean, frame: number, mine = false) {
+export function drawDesk(c: Ctx, x: number, y: number, working: boolean, night: boolean, frame: number, mine = false, ramen = false) {
   shadow(c, x + 12, y + 12, 13);
   blit(c, DESK(), x, y + 1);
   blit(c, MONITOR(working || mine, frame % 2 === 1), x + 6, y - 7);
@@ -348,6 +397,14 @@ export function drawDesk(c: Ctx, x: number, y: number, working: boolean, night: 
   rect(c, x + 19, y + 2, 2, 2, P.white);
   rect(c, x + 2, y + 3, 4, 3, P.white);
   if (mine) rect(c, x + 3, y + 2, 3, 3, P.postit);
+  if (ramen) {
+    // 컵라면과 김
+    rect(c, x + 1, y + 1, 5, 5, OUT);
+    rect(c, x + 2, y + 2, 3, 1, '#f3e3c3');
+    rect(c, x + 2, y + 3, 3, 2, '#e8533f');
+    if (frame % 3 === 0) rect(c, x + 3, y - 2, 1, 2, '#efefef');
+    if (frame % 3 === 1) rect(c, x + 2, y - 3, 1, 2, '#efefef');
+  }
   if (night && (working || mine)) {
     c.fillStyle = 'rgba(127, 208, 245, 0.16)';
     c.fillRect(x + 3, y + 3, 18, 14);
@@ -370,6 +427,7 @@ export interface Look {
 }
 
 export type Pose = 'stand' | 'walk' | 'sit' | 'sleep' | 'drink' | 'cheer';
+export type Dir = 'down' | 'up' | 'side';
 
 const FRONT = [
   '....oooo....',
@@ -391,8 +449,51 @@ const FRONT = [
   '..okko.okko.',
   '...oo...oo..',
 ];
+const SIDE = [
+  '....oooo....',
+  '...ohhhhho..',
+  '..ohhhhhhho.',
+  '..ohhhhssso.',
+  '..ohhhssseo.',
+  '..ohhssssso.',
+  '...ossssSo..',
+  '....oSSSo...',
+  '...otttto...',
+  '..otttttto..',
+  '..otttTtto..',
+  '..ottsTtto..',
+  '...oTTTTo...',
+  '...oppppo...',
+  '...oppppo...',
+  '..opo..opo..',
+  '.okko..okko.',
+  '..oo....oo..',
+];
+const SIDE_STEP = [...SIDE.slice(0, 15), '....oppo....', '....okko....', '.....oo.....'];
+const BACK_WALK = [
+  '............',
+  '....oooo....',
+  '...ohhhho...',
+  '..ohhhhhho..',
+  '..ohhHHhho..',
+  '..ohHHHHho..',
+  '..oHHHHHHo..',
+  '...oSSSSo...',
+  '..otttttto..',
+  '.otttttttto.',
+  '.otTttttTto.',
+  '.osTttttTso.',
+  '..oTTTTTTo..',
+  '..oppppppo..',
+  '..oppPPppo..',
+  '..oppo.oppo.',
+  '..okko.okko.',
+  '...oo...oo..',
+];
+const BACK_STEP = [...BACK_WALK.slice(0, 15), '..oppo.oppo.', '..okko..oo..', '...oo.......'];
 const FRONT_STEP = [...FRONT.slice(0, 15), '..oppo.oppo.', '..okko..oo..', '...oo.......'];
 const FRONT_SLEEPY = FRONT.map((r, i) => (i === 5 ? '..osSssSso..' : r));
+const FRONT_BLINK = FRONT_SLEEPY;
 const CHEER = FRONT.map((r, i) => {
   const arms: Record<number, string> = {
     0: 'o...oooo...o',
@@ -439,7 +540,7 @@ function personPal(look: Look): Pal {
 }
 
 // (x, y)는 발밑 가운데
-export function drawPerson(c: Ctx, x: number, y: number, look: Look, pose: Pose, frame: number, facing: 1 | -1 = 1) {
+export function drawPerson(c: Ctx, x: number, y: number, look: Look, pose: Pose, frame: number, facing: 1 | -1 = 1, dir: Dir = 'down', seed = 0) {
   const pal = personPal(look);
   const id = `${look.hair}${look.shirt}`;
   if (pose === 'sit') {
@@ -464,7 +565,19 @@ export function drawPerson(c: Ctx, x: number, y: number, look: Look, pose: Pose,
     return;
   }
   const stepping = pose === 'walk' && frame % 2 === 1;
-  blit(c, sprite(`f${stepping ? 1 : 0}${id}`, stepping ? FRONT_STEP : FRONT, pal), x - 6, y - 18 - (stepping ? 1 : 0), facing < 0);
+  const lift = stepping ? 1 : 0;
+  if (pose === 'walk' && dir === 'side') {
+    blit(c, sprite(`sd${lift}${id}`, stepping ? SIDE_STEP : SIDE, pal), x - 6, y - 18 - lift, facing < 0);
+    return;
+  }
+  if (pose === 'walk' && dir === 'up') {
+    blit(c, sprite(`bw${lift}${id}`, stepping ? BACK_STEP : BACK_WALK, pal), x - 6, y - 18 - lift);
+    return;
+  }
+  // 앞모습. 가끔 눈을 깜빡인다
+  const blink = (frame + seed) % 14 === 0;
+  const rows = stepping ? FRONT_STEP : blink ? FRONT_BLINK : FRONT;
+  blit(c, sprite(`f${lift}${blink ? 'b' : ''}${id}`, rows, pal), x - 6, y - 18 - lift, facing < 0);
   if (pose === 'drink') {
     const mx = x + 4;
     const my = y - 9;
