@@ -6,6 +6,7 @@ import {
   showFullScreenAd,
   TossAds,
   isMinVersionSupported,
+  requestNotificationAgreement,
 } from '@apps-in-toss/web-framework';
 
 // 개발 중에는 반드시 테스트 ID를 쓴다(실제 ID로 테스트하면 정책 위반).
@@ -170,4 +171,36 @@ export function attachBanner(target: HTMLElement, onEmpty: () => void): () => vo
     cancelled = true;
     destroy?.();
   };
+}
+
+/* ── 매일 아침 알림 동의 ──
+   알림은 콘솔 > 푸시알림에서 '토스에게 발송 요청하기'로 매일 오전 8시 반복 발송한다.
+   앱은 동의 화면만 띄운다. templateCode는 콘솔 템플릿의 발송 코드. */
+
+export const PUSH_TEMPLATE_CODE = import.meta.env.VITE_PUSH_TEMPLATE_CODE ?? '';
+
+export type ReminderResult = 'agreed' | 'rejected' | 'unsupported';
+
+export function reminderSupported(): boolean {
+  try {
+    return !!PUSH_TEMPLATE_CODE && requestNotificationAgreement.isSupported();
+  } catch {
+    return false;
+  }
+}
+
+export function requestDailyReminder(): Promise<ReminderResult> {
+  if (!reminderSupported()) return Promise.resolve('unsupported');
+  return new Promise((resolve) => {
+    let cleanup: (() => void) | null = null;
+    const done = (r: ReminderResult) => {
+      cleanup?.();
+      resolve(r);
+    };
+    cleanup = requestNotificationAgreement({
+      options: { templateCode: PUSH_TEMPLATE_CODE },
+      onEvent: ({ type }) => done(type === 'agreementRejected' ? 'rejected' : 'agreed'),
+      onError: () => done('unsupported'),
+    });
+  });
 }

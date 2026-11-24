@@ -147,3 +147,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .small { color: var(--celadon); font-weight: 700; font-size: 16px; padding: 10px 12px; min-height: 44px; white-space: nowrap; }
 .empty { color: var(--ink-soft); }
 .banner { width: 100%; margin-top: 40px; } /* 버튼과 충분히 떨어뜨린다 */
+
+/* 알림 제안 */
+.reminder { display: flex; flex-direction: column; gap: 6px; padding: 18px 0 4px; border-top: 1px solid var(--line); }
+.reminder-title { font-size: 21px; font-weight: 800; }
+.reminder-body { color: var(--ink-soft); word-break: keep-all; margin-bottom: 8px; }
