@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.ait
+.granite/
+.DS_Store
+.env*
+!.env.example
