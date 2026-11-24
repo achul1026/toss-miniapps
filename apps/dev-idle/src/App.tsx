@@ -20,6 +20,7 @@ import { OfficeScene } from './office/OfficeScene';
 import { officeLevel, THEMES } from './office/art';
 import { adReady, onAdReady, preloadRewarded, showRewarded } from './lib/ads';
 import { buy, CATALOG, iapSupported, loadPrices } from './lib/shop';
+import { leaderboardSupported, openLeaderboard, submitScore } from './lib/leaderboard';
 import { isMuted, onMutedChange, setMuted, sfx } from './lib/sound';
 import { finishedTips, nextTip, type Tip } from './tutorial';
 
@@ -154,8 +155,15 @@ export default function App() {
       tick(Math.min(1, (now - last) / 1000));
       last = now;
     }, 200);
-    const saver = window.setInterval(persist, 5000);
-    const onHide = () => document.visibilityState === 'hidden' && persist();
+    const saver = window.setInterval(() => {
+      persist();
+      void submitScore(useGame.getState().lifetime);
+    }, 5000);
+    const onHide = () => {
+      if (document.visibilityState !== 'hidden') return;
+      persist();
+      void submitScore(useGame.getState().lifetime, true);
+    };
     document.addEventListener('visibilitychange', onHide);
     return () => {
       window.clearInterval(loop);
@@ -199,6 +207,13 @@ function Office() {
           <span className="rank">{RANKS[rank]}</span>
           {s.career > 0 && <span className="career">경력 {s.career}년</span>}
         </div>
+        {leaderboardSupported() && (
+          <button className="sound" aria-label="순위 보기" onClick={() => void openLeaderboard()}>
+            <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" shapeRendering="crispEdges">
+              <path d="M4 2h8v2h2v3h-2v1h-1v1H9v2h2v2H5v-2h2V9H5V8H4V7H2V4h2zm-1 3v1h1V5zm9 0v1h1V5z" fill="currentColor" />
+            </svg>
+          </button>
+        )}
         <SoundToggle />
         <div className="money">
           <span className="money-label">용역비</span>
@@ -482,7 +497,7 @@ function Shop() {
 }
 
 function Resign() {
-  const { s, resign } = useGame();
+  const { s, resign, lifetime } = useGame();
   const [confirm, setConfirm] = useState(false);
   const gain = careerFrom(s.totalFee);
   const rank = rankIndex(s.delivered);
@@ -495,6 +510,10 @@ function Resign() {
       <p className="row-desc">
         팀원·장비·용역비는 처음으로 돌아가고, 쌓인 경력 1년마다 모든 생산량이 10%씩 늘어요. 지금 경력 {s.career}년, 생산량 ×
         {multiplier(s).toFixed(1)}.
+      </p>
+      <p className="row-desc">
+        이직 전까지 합쳐 지금까지 납품한 프로젝트 {lifetime.toLocaleString('ko-KR')}건
+        {leaderboardSupported() ? '. 이 기록으로 토스 게임센터 순위에 올라가요.' : ''}
       </p>
       {nextRank !== undefined && (
         <p className="row-desc">

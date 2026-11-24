@@ -53,3 +53,16 @@ describe('사무실 이벤트', () => {
     expect(hitSpot(spots, 60, 70)).toBe(-1);
   });
 });
+
+import { useGame } from '../game';
+describe('누적 납품 기록', () => {
+  it('납품하면 오르고 이직해도 줄지 않는다', () => {
+    useGame.setState({ ready: true, lifetime: 5 });
+    const s = useGame.getState().s;
+    useGame.setState({ s: { ...s, delivered: s.delivered + 2 } });
+    expect(useGame.getState().lifetime).toBe(7);
+    const after = useGame.getState().s;
+    useGame.setState({ s: { ...after, delivered: 0, career: after.career + 3 } });
+    expect(useGame.getState().lifetime).toBe(7);
+  });
+});
