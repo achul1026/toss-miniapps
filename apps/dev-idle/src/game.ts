@@ -62,6 +62,7 @@ interface Game {
   init: () => Promise<void>;
   tick: (dtSec: number) => void;
   tap: () => void;
+  bonus: (lines: number) => void; // 조는 팀원 깨우기 등
   hire: (id: string) => void;
   gear: (id: string) => void;
   resign: () => Promise<void>; // 이직(환생)
@@ -105,6 +106,7 @@ export const useGame = create<Game>((set, get) => ({
     const s = get().s;
     set({ s: addLines(s, linesPerTap(s)), taps: get().taps + 1 });
   },
+  bonus: (lines) => set({ s: addLines(get().s, lines) }),
   hire: (id) => {
     const next = buyHire(get().s, id);
     if (next) set({ s: next });
