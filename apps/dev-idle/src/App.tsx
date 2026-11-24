@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   GEARS,
   HIRES,
@@ -16,6 +16,7 @@ import {
 } from 'dev-idle-core';
 import { useGame } from './game';
 import { duration, won } from './lib/format';
+import { OfficeScene } from './office/OfficeScene';
 
 const CLIENTS = ['동네 꽃집', '치킨 프랜차이즈', '중견 제조사', '지역 농협', '대학교', '구청', '시청', '도청', '공기업', '중앙부처'];
 // 고객 규모에 맞는 일감: 고객 단계와 같은 줄에서 두 가지 중 하나
@@ -148,7 +149,7 @@ function Office() {
         </p>
       </section>
 
-      <Monitor />
+      <Office2 />
 
       <p className="rates">
         탭 한 번에 {won(linesPerTap(s))}줄 · 팀이 초당 {won(linesPerSec(s))}줄
@@ -180,34 +181,23 @@ function Office() {
   );
 }
 
-function Monitor() {
-  const { tap, taps } = useGame();
-  const [pops, setPops] = useState<{ id: number; x: number; y: number }[]>([]);
-  const lines = useMemo(() => Array.from({ length: 7 }, (_, i) => CODE[(taps + i) % CODE.length]), [taps]);
-  const onTap = (e: React.PointerEvent<HTMLButtonElement>) => {
-    tap();
-    const r = e.currentTarget.getBoundingClientRect();
-    const id = performance.now();
-    setPops((p) => [...p.slice(-6), { id, x: e.clientX - r.left, y: e.clientY - r.top }]);
-    window.setTimeout(() => setPops((p) => p.filter((q) => q.id !== id)), 700);
-  };
+function Office2() {
+  const taps = useGame((g) => g.taps);
   const s = useGame((g) => g.s);
+  const [team, setTeam] = useState({ working: 0, total: 0 });
+  const onWorkingChange = useCallback((working: number, total: number) => setTeam({ working, total }), []);
+  const hidden = Object.values(s.hires).reduce((a, b) => a + b, 0) - team.total;
   return (
-    <button className="monitor" onPointerDown={onTap} aria-label="코딩하기 (탭)">
-      <div className="screen">
-        {lines.map((l, i) => (
-          <code key={i} className={i === lines.length - 1 ? 'line cursor' : 'line'}>
-            {l}
-          </code>
-        ))}
-      </div>
-      {pops.map((p) => (
-        <span key={p.id} className="pop" style={{ left: p.x, top: p.y }}>
-          +{won(linesPerTap(s))}
-        </span>
-      ))}
-      <span className="hint">모니터를 탭해서 코딩해요</span>
-    </button>
+    <section className="office-scene" aria-label="사무실">
+      <OfficeScene onWorkingChange={onWorkingChange} />
+      <p className="code-strip" aria-hidden="true">
+        <span>{CODE[taps % CODE.length]}</span>
+      </p>
+      <p className="scene-note">
+        {team.total > 0 ? `팀원 ${team.total}명 중 ${team.working}명 일하는 중` : '사무실을 눌러 코딩해요'}
+        {hidden > 0 ? ` · 다른 층에 ${hidden}명 더` : ''}
+      </p>
+    </section>
   );
 }
 
