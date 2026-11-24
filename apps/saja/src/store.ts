@@ -10,9 +10,10 @@ interface Saved extends StreakState {
   wrong: string[]; // 오답 노트 id
   doneDates: string[]; // 완료한 날짜 (출석표)
   todayScore: Record<string, number>;
+  reminder: 'agreed' | 'rejected' | null; // 매일 아침 알림 동의 여부
 }
 
-const EMPTY: Saved = { lastDoneDate: null, streak: 0, bestStreak: 0, learned: [], wrong: [], doneDates: [], todayScore: {} };
+const EMPTY: Saved = { lastDoneDate: null, streak: 0, bestStreak: 0, learned: [], wrong: [], doneDates: [], todayScore: {}, reminder: null };
 
 interface AppState {
   ready: boolean;
@@ -22,6 +23,7 @@ interface AppState {
   init: () => Promise<void>;
   finishToday: (correct: number, wrongIds: string[]) => Promise<void>;
   clearWrong: (id: string) => Promise<void>;
+  setReminder: (r: 'agreed' | 'rejected') => Promise<void>;
   streakNow: () => number;
 }
 
@@ -52,6 +54,11 @@ export const useApp = create<AppState>((set, get) => {
     },
     clearWrong: async (id) => {
       const next = { ...get().saved, wrong: get().saved.wrong.filter((w) => w !== id) };
+      set({ saved: next });
+      await saveJSON(KEY, next);
+    },
+    setReminder: async (r) => {
+      const next = { ...get().saved, reminder: r };
       set({ saved: next });
       await saveJSON(KEY, next);
     },

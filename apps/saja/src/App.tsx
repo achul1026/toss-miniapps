@@ -3,7 +3,7 @@ import { useApp } from './store';
 import { IDIOMS } from './data/idioms';
 import { buildQuiz, buildReview, type Question } from './lib/quiz';
 import { dayNumber, addDays } from './lib/daily';
-import { attachBanner, preloadRewarded, showRewarded } from './lib/platform';
+import { attachBanner, preloadRewarded, reminderSupported, requestDailyReminder, showRewarded } from './lib/platform';
 
 type Screen =
   | { name: 'home' }
@@ -194,13 +194,14 @@ function Quiz({ questions, review, go }: { questions: Question[]; review: boolea
 }
 
 function Result({ correct, total, review, go }: { correct: number; total: number; review: boolean; go: Go }) {
-  const { saved, today, streakNow } = useApp();
+  const { saved, today, streakNow, setReminder } = useApp();
   const banner = useRef<HTMLDivElement>(null);
   const [bannerEmpty, setBannerEmpty] = useState(false);
   const [adReady, setAdReady] = useState(false);
   const [adBusy, setAdBusy] = useState(false);
   const learned = IDIOMS.filter((i) => saved.learned.includes(i.id));
   const offerBonus = !review && learned.length >= 2;
+  const [askReminder, setAskReminder] = useState(!review && saved.reminder === null && reminderSupported());
 
   // 리워드 광고는 화면에 들어올 때 미리 불러둔다
   useEffect(() => (offerBonus ? preloadRewarded(setAdReady) : undefined), [offerBonus]);
@@ -222,6 +223,22 @@ function Result({ correct, total, review, go }: { correct: number; total: number
         </p>
         {!review && <p className="note">{streakNow()}일째 도장을 찍었어요. 내일 또 만나요.</p>}
       </div>
+      {askReminder && (
+        <section className="reminder">
+          <p className="reminder-title">내일 아침 8시에 알려드릴까요?</p>
+          <p className="reminder-body">오늘의 사자성어가 도착하면 토스 알림으로 알려드려요.</p>
+          <button
+            className="quiet"
+            onClick={async () => {
+              const r = await requestDailyReminder();
+              if (r !== 'unsupported') await setReminder(r);
+              setAskReminder(false);
+            }}
+          >
+            매일 아침 알림 받기
+          </button>
+        </section>
+      )}
       {offerBonus && adReady && (
         <button className="quiet" disabled={adBusy} onClick={bonus}>
           {adBusy ? '광고를 보여주고 있어요' : '광고 보고 복습 3문제 더 풀기'}
