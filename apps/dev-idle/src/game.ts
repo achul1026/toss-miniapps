@@ -9,6 +9,7 @@ import {
   linesPerTap,
   newState,
   offlineLines,
+  project,
   OFFLINE_CAP_SEC,
   type State,
 } from 'dev-idle-core';
@@ -24,13 +25,22 @@ import {
   type GameEvent,
 } from './events';
 
+import { ownsMacbook, recoverPending, SKU, type SkuId } from './lib/shop';
+import { won } from './lib/format';
+
 const rnd = () => Math.random();
+
+export interface Perks {
+  macbook: boolean; // 생산 영구 2배 (이직해도 유지)
+}
 
 const KEY = 'dev-idle:v1';
 
 interface Saved {
   state: State;
   savedAt: number;
+  perks?: Perks;
+  granted?: string[]; // 지급 끝난 주문 번호 (중복 지급 방지)
 }
 
 async function load(): Promise<Saved | null> {
@@ -47,8 +57,8 @@ async function load(): Promise<Saved | null> {
   }
 }
 
-async function save(state: State) {
-  const text = JSON.stringify({ state, savedAt: Date.now() } satisfies Saved);
+async function save(state: State, perks: Perks, granted: string[]) {
+  const text = JSON.stringify({ state, savedAt: Date.now(), perks, granted: granted.slice(-200) } satisfies Saved);
   try {
     await Storage.setItem(KEY, text);
   } catch {
@@ -89,6 +99,14 @@ interface Game {
   hitEvent: (x: number, y: number) => boolean; // 사무실 좌표에서 버그·포스트잇 처리
   answerEvent: (accept: boolean) => void; // 야근·요구사항 변경 제안에 답하기
   clearNotice: () => void;
+  // 수익화
+  perks: Perks;
+  granted: string[];
+  offlineDoubled: boolean;
+  perkX: () => number;
+  grant: (sku: SkuId, orderId: string) => boolean;
+  doubleOffline: () => void; // 광고 보고 자리 비운 수익 2배
+  answerEventBoosted: () => void; // 광고 보고 야근 4배
 }
 
 export const useGame = create<Game>((set, get) => ({
@@ -100,8 +118,18 @@ export const useGame = create<Game>((set, get) => ({
   boost: null,
   nextEventIn: 90, // 첫 이벤트는 90초 뒤
   notice: null,
+  perks: { macbook: false },
+  granted: [],
+  offlineDoubled: false,
+  perkX: () => (get().perks.macbook ? 2 : 1),
   init: async () => {
     const saved = await load();
+    if (saved?.perks) set({ perks: saved.perks, granted: saved.granted ?? [] });
+    // 지급 못 한 주문, 맥북 구매 내역 복원 (토스 앱에서만 동작)
+    void recoverPending((sku, id) => get().grant(sku, id));
+    void ownsMacbook().then((owns) => {
+      if (owns !== null && owns !== get().perks.macbook) set({ perks: { ...get().perks, macbook: owns } });
+    });
     if (!saved) {
       set({ ready: true });
       return;
@@ -110,7 +138,7 @@ export const useGame = create<Game>((set, get) => ({
     let s = saved.state;
     let offline: Offline | null = null;
     if (awaySec >= 60 && linesPerSec(s) > 0) {
-      const gained = offlineLines(s, awaySec);
+      const gained = offlineLines(s, awaySec) * (saved.perks?.macbook ? 2 : 1);
       const after = addLines(s, gained);
       offline = {
         awaySec: Math.min(awaySec, OFFLINE_CAP_SEC),
@@ -126,7 +154,7 @@ export const useGame = create<Game>((set, get) => ({
     const g = get();
     let s = g.s;
     let boost = g.boost;
-    const lps = linesPerSec(s) * (boost?.x ?? 1);
+    const lps = linesPerSec(s) * (boost?.x ?? 1) * g.perkX();
     if (lps > 0) s = addLines(s, lps * dt);
     if (boost) boost = boost.left - dt > 0 ? { ...boost, left: boost.left - dt } : null;
 
@@ -198,7 +226,7 @@ export const useGame = create<Game>((set, get) => ({
   clearNotice: () => set({ notice: null }),
   tap: () => {
     const s = get().s;
-    set({ s: addLines(s, linesPerTap(s)), taps: get().taps + 1 });
+    set({ s: addLines(s, linesPerTap(s) * get().perkX()), taps: get().taps + 1 });
   },
   bonus: (lines) => set({ s: addLines(get().s, lines) }),
   hire: (id) => {
@@ -215,10 +243,46 @@ export const useGame = create<Game>((set, get) => ({
     if (gain <= 0) return;
     const next = newState(s.career + gain);
     set({ s: next });
-    await save(next);
+    await save(next, get().perks, get().granted);
   },
-  dismissOffline: () => set({ offline: null }),
+  dismissOffline: () => set({ offline: null, offlineDoubled: false }),
   persist: () => {
-    void save(get().s);
+    const g = get();
+    void save(g.s, g.perks, g.granted);
+  },
+  grant: (sku, orderId) => {
+    const g = get();
+    if (g.granted.includes(orderId)) return true; // 이미 지급됨
+    let { s, perks } = g;
+    let notice: string;
+    if (sku === SKU.starter) {
+      const fee = project(s.delivered).fee * 10;
+      s = { ...s, fee: s.fee + fee, totalFee: s.totalFee + fee };
+      notice = '신입 지원금이 들어왔어요';
+    } else if (sku === SKU.macbook) {
+      perks = { ...perks, macbook: true };
+      notice = '최신 맥북 지급! 생산량이 영구 2배가 됐어요';
+    } else {
+      return false;
+    }
+    const granted = [...g.granted, orderId];
+    set({ s, perks, granted, notice });
+    void save(s, perks, granted);
+    return true;
+  },
+  doubleOffline: () => {
+    const g = get();
+    if (!g.offline || g.offlineDoubled) return;
+    set({ s: addLines(g.s, g.offline.lines), offlineDoubled: true, notice: `자리 비운 수익 2배! 코드 +${won(g.offline.lines)}줄` });
+  },
+  answerEventBoosted: () => {
+    const ev = get().event;
+    if (ev?.kind !== 'overtime') return;
+    set({
+      boost: { x: 4, left: 60, reason: 'overtime' },
+      notice: '광고 덕분에 야근 효율 4배!',
+      event: null,
+      nextEventIn: nextEventDelay(rnd),
+    });
   },
 }));

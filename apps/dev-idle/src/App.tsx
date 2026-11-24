@@ -17,6 +17,15 @@ import {
 import { useGame } from './game';
 import { duration, won } from './lib/format';
 import { OfficeScene } from './office/OfficeScene';
+import { adReady, onAdReady, preloadRewarded, showRewarded } from './lib/ads';
+import { buy, CATALOG, iapSupported, loadPrices } from './lib/shop';
+
+// 보상형 광고가 준비됐는지 화면에서 쓰는 훅
+function useAdReady() {
+  const [ready, setReady] = useState(adReady());
+  useEffect(() => onAdReady(setReady) as () => void, []);
+  return ready;
+}
 
 const CLIENTS = ['동네 꽃집', '치킨 프랜차이즈', '중견 제조사', '지역 농협', '대학교', '구청', '시청', '도청', '공기업', '중앙부처'];
 // 고객 규모에 맞는 일감: 고객 단계와 같은 줄에서 두 가지 중 하나
@@ -57,7 +66,7 @@ const CODE = [
   '// 요구사항 변경 반영 (v3_최종_진짜최종)',
 ];
 
-type Tab = 'hire' | 'gear' | 'resign';
+type Tab = 'hire' | 'gear' | 'resign' | 'shop';
 
 export default function App() {
   const { ready, init, tick, persist } = useGame();
@@ -68,6 +77,7 @@ export default function App() {
   // 게임 루프 + 주기적 저장
   useEffect(() => {
     if (!ready) return;
+    preloadRewarded();
     let last = performance.now();
     const loop = window.setInterval(() => {
       const now = performance.now();
@@ -89,7 +99,8 @@ export default function App() {
 }
 
 function Office() {
-  const { s, offline, dismissOffline } = useGame();
+  const { s, offline, dismissOffline, doubleOffline, offlineDoubled, perkX } = useGame();
+  const ad = useAdReady();
   const [tab, setTab] = useState<Tab>('hire');
   const rank = rankIndex(s.delivered);
   const p = project(s.delivered);
@@ -130,9 +141,21 @@ function Office() {
               {offline.delivered > 0 ? `. 납품 ${offline.delivered}건, +${won(offline.fee)}원` : ''}
             </p>
           </div>
-          <button className="small" onClick={dismissOffline}>
-            확인
-          </button>
+          <div className="away-buttons">
+            {ad && !offlineDoubled && (
+              <button
+                className="small ad"
+                onClick={async () => {
+                  if (await showRewarded()) doubleOffline();
+                }}
+              >
+                광고 보고 2배
+              </button>
+            )}
+            <button className="small" onClick={dismissOffline}>
+              확인
+            </button>
+          </div>
         </section>
       )}
 
@@ -154,7 +177,7 @@ function Office() {
       <EventCard />
 
       <p className="rates">
-        탭 한 번에 {won(linesPerTap(s))}줄 · 팀이 초당 {won(linesPerSec(s))}줄
+        탭 한 번에 {won(linesPerTap(s) * perkX())}줄 · 팀이 초당 {won(linesPerSec(s) * perkX())}줄
       </p>
 
       <nav className="tabs" role="tablist">
@@ -163,6 +186,7 @@ function Office() {
             ['hire', '팀원 채용'],
             ['gear', '장비'],
             ['resign', '이직'],
+            ['shop', '상점'],
           ] as [Tab, string][]
         ).map(([id, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'tab on' : 'tab'} onClick={() => setTab(id)}>
@@ -173,6 +197,7 @@ function Office() {
       {tab === 'hire' && <HireList />}
       {tab === 'gear' && <GearList />}
       {tab === 'resign' && <Resign />}
+      {tab === 'shop' && <Shop />}
 
       {promoted && (
         <div className="toast" role="status">
@@ -204,7 +229,8 @@ function Office2() {
 }
 
 function EventCard() {
-  const { event, boost, notice, answerEvent, clearNotice } = useGame();
+  const { event, boost, notice, answerEvent, answerEventBoosted, clearNotice } = useGame();
+  const ad = useAdReady();
   useEffect(() => {
     if (!notice) return;
     const t = window.setTimeout(clearNotice, 2800);
@@ -251,6 +277,16 @@ function EventCard() {
                   : '진척률이 30% 줄어드는 대신 추가 용역비를 받아요.'}{' '}
                 {left}초 안에 정해 주세요.
               </p>
+              {event.kind === 'overtime' && ad && (
+                <button
+                  className="ad-wide"
+                  onClick={async () => {
+                    if (await showRewarded()) answerEventBoosted();
+                  }}
+                >
+                  광고 보고 4배로 야근하기
+                </button>
+              )}
               <div className="event-buttons">
                 <button className="secondary" onClick={() => answerEvent(false)}>
                   {event.kind === 'overtime' ? '칼퇴할게요' : '거절할게요'}
@@ -318,6 +354,43 @@ function GearList() {
           </li>
         );
       })}
+    </ul>
+  );
+}
+
+function Shop() {
+  const { grant, perks } = useGame();
+  const [prices, setPrices] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const can = iapSupported();
+  useEffect(() => {
+    loadPrices().then(setPrices);
+  }, []);
+  return (
+    <ul className="list">
+      {CATALOG.map((p) => {
+        const owned = p.sku === 'dev_idle_macbook' && perks.macbook;
+        return (
+          <li key={p.sku} className="row">
+            <div className="row-main">
+              <p className="row-name">{p.name}</p>
+              <p className="row-desc">{p.desc}</p>
+            </div>
+            <button
+              className="buy"
+              disabled={!can || owned || busy !== null}
+              onClick={async () => {
+                setBusy(p.sku);
+                await buy(p.sku, grant);
+                setBusy(null);
+              }}
+            >
+              {owned ? '보유 중' : busy === p.sku ? '결제 중' : (prices[p.sku] ?? '구매')}
+            </button>
+          </li>
+        );
+      })}
+      {!can && <li className="row row-desc">결제는 토스 앱에서 열었을 때 할 수 있어요.</li>}
     </ul>
   );
 }
