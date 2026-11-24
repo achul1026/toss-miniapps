@@ -343,9 +343,9 @@ const DESK = () =>
     { o: OUT, w: P.wood, W: P.woodHi, d: P.woodDark },
   );
 
-const MONITOR = (lit: boolean, alt: boolean) =>
+const MONITOR = (lit: boolean, alt: boolean, err = false) =>
   sprite(
-    `mon-${lit}-${alt}`,
+    `mon-${lit}-${alt}-${err}`,
     [
       'oooooooooooo',
       'obbbbbbbbbbo',
@@ -362,9 +362,9 @@ const MONITOR = (lit: boolean, alt: boolean) =>
     {
       o: OUT,
       b: P.bezel,
-      S: lit ? P.screen : P.screenOff,
-      s: lit ? (alt ? P.screenHi : P.screen) : P.screenOff,
-      H: lit ? (alt ? P.screen : P.screenHi) : P.screenOff,
+      S: err ? '#c8382f' : lit ? P.screen : P.screenOff,
+      s: err ? (alt ? '#ff8a80' : '#e2483d') : lit ? (alt ? P.screenHi : P.screen) : P.screenOff,
+      H: err ? '#fff1ee' : lit ? (alt ? P.screen : P.screenHi) : P.screenOff,
       M: P.metalDark,
     },
   );
@@ -386,10 +386,10 @@ const CHAIR = () =>
     { o: OUT, C: '#4a5470', c: '#5d6987', M: P.metalDark },
   );
 
-export function drawDesk(c: Ctx, x: number, y: number, working: boolean, night: boolean, frame: number, mine = false, ramen = false) {
+export function drawDesk(c: Ctx, x: number, y: number, working: boolean, night: boolean, frame: number, mine = false, ramen = false, error = false) {
   shadow(c, x + 12, y + 12, 13);
   blit(c, DESK(), x, y + 1);
-  blit(c, MONITOR(working || mine, frame % 2 === 1), x + 6, y - 7);
+  blit(c, MONITOR(working || mine, frame % 2 === 1, error && (working || mine)), x + 6, y - 7);
   // 키보드, 머그, 서류
   rect(c, x + 7, y + 4, 10, 2, OUT);
   rect(c, x + 8, y + 4, 8, 1, '#e9e2d6');
@@ -601,3 +601,32 @@ export const LOOKS: Record<string, Look> = {
   pmo: { hair: '#4a3436', hairShade: '#352425', shirt: '#2f5d6e', shirtShade: '#224754', pants: '#22222a' },
   consultant: { hair: '#e0b85a', hairShade: '#b8923f', shirt: '#24406b', shirtShade: '#1a2f52', pants: '#16161c' },
 };
+
+/* 이벤트 소품 */
+const BUG = (f: number) =>
+  sprite(
+    `bug${f}`,
+    f
+      ? ['.o...o.', '..ooo..', 'orrrrro', '.rRrRr.', 'orrrrro', '..ooo..', '.o...o.']
+      : ['o.....o', '.oooo..', '.rrrrro', 'orRrRr.', '.rrrrro', '.oooo..', 'o.....o'],
+    { o: OUT, r: '#e2483d', R: '#ffd2c8' },
+  );
+
+export function drawBug(c: Ctx, x: number, y: number, frame: number) {
+  shadow(c, x, y + 3, 4);
+  blit(c, BUG(frame % 2), x - 3 + (frame % 2), y - 4);
+}
+
+export function drawAuditNote(c: Ctx, x: number, y: number, frame: number) {
+  const up = frame % 2;
+  rect(c, x - 4, y - 5 - up, 9, 9, OUT);
+  rect(c, x - 3, y - 4 - up, 7, 7, '#ff9db0');
+  rect(c, x, y - 3 - up, 1, 3, OUT);
+  rect(c, x, y + 1 - up, 1, 1, OUT);
+}
+
+export function drawExclaim(c: Ctx, x: number, y: number) {
+  rect(c, x - 2, y - 7, 5, 8, OUT);
+  rect(c, x - 1, y - 6, 3, 4, '#ffd84d');
+  rect(c, x - 1, y - 1, 3, 1, '#ffd84d');
+}

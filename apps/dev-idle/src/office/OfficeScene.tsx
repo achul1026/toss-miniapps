@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { HIRES, linesPerTap, rankIndex } from 'dev-idle-core';
 import { useGame } from '../game';
 import { won } from '../lib/format';
-import { drawChair, drawDesk, drawPerson, drawRoom, H, LOOKS, W, type Pose } from './art';
+import { drawAuditNote, drawBug, drawChair, drawDesk, drawPerson, drawRoom, H, LOOKS, W, type Pose } from './art';
 import { cheerAll, DESKS, makeAgent, myDeskIndex, rand, seatOf, step, wake, workingCount, type Agent } from './sim';
 
 const SCALE = 4; // 캔버스 내부 해상도 배율 (CSS로 화면 폭에 맞춘다)
@@ -37,7 +37,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
   const meTyping = useRef(0);
   const r = useRef(rand(20261125));
   const s = useGame((g) => g.s);
-  const { tap, bonus } = useGame();
+  const { tap, bonus, hitEvent } = useGame();
   const rank = rankIndex(s.delivered);
   const myDesk = myDeskIndex(rank);
   const roles = teamRoles(s.hires).join(',');
@@ -90,10 +90,14 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
       step(agents.current, dt, r.current);
       meTyping.current = Math.max(0, meTyping.current - dt);
 
-      const night = isNight();
+      const g = useGame.getState();
+      const ev = g.event;
+      const overtime = g.boost?.reason === 'overtime';
+      const night = isNight() || overtime;
+      const outage = ev?.kind === 'outage';
       c.setTransform(SCALE, 0, 0, SCALE, 0, 0);
       c.clearRect(0, 0, W, H);
-      drawRoom(c, night, false, clock);
+      drawRoom(c, night, outage, clock);
 
       const occupants = new Map<number, Agent>();
       for (const a of agents.current) {
@@ -103,7 +107,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
       DESKS.forEach((d, i) => {
         const occ = occupants.get(i);
         const working = i === myDesk ? meTyping.current > 0 : occ?.activity === 'work';
-        drawDesk(c, d.x, d.y, !!working, night, frame, i === myDesk, i === 1 || i === 6);
+        drawDesk(c, d.x, d.y, !!working, night, frame, i === myDesk, i === 1 || i === 6, outage);
       });
 
       // 사람과 의자: 아래쪽에 있는 것이 앞에 보이도록 y순으로. 의자 등받이는 앉은 사람 위에 덮는다.
@@ -127,6 +131,12 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
         })),
       ];
       items.sort((p, q) => p.y - q.y).forEach((p) => p.draw());
+
+      // 이벤트 연출: 버그, 감리 포스트잇 (장애 중엔 모니터가 빨간 에러 화면)
+      if (ev?.kind === 'outage') {
+        ev.bugs.forEach((b, i) => !b.done && drawBug(c, b.x + Math.sin(clock * 3 + i) * 2, b.y, frame + i));
+      }
+      if (ev?.kind === 'audit') ev.notes.forEach((n) => !n.done && drawAuditNote(c, n.x, n.y, frame));
 
       // 내 머리 위 표시
       c.fillStyle = '#3b2a30';
@@ -162,6 +172,11 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
     const el = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - el.left) / el.width) * W;
     const y = ((e.clientY - el.top) / el.height) * H;
+    // 이벤트 대상(버그·포스트잇)을 먼저 처리
+    if (hitEvent(x, y)) {
+      floats.current.push({ x, y: y - 6, text: '처리!', t: 0.9, color: '#e2483d' });
+      return;
+    }
     // 조는 사람을 눌렀으면 깨운다
     const sleeper = agents.current.find((a) => a.activity === 'nap' && Math.abs(a.pos.x - x) < 12 && Math.abs(a.pos.y - 4 - y) < 10);
     if (sleeper && wake(sleeper)) {
