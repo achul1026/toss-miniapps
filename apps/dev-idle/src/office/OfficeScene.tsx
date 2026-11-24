@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { HIRES, linesPerTap, rankIndex } from 'dev-idle-core';
 import { useGame } from '../game';
 import { won } from '../lib/format';
-import { drawDesk, drawPerson, drawRoom, H, LOOKS, W, type Pose } from './art';
+import { drawChair, drawDesk, drawPerson, drawRoom, H, LOOKS, W, type Pose } from './art';
 import { cheerAll, DESKS, makeAgent, myDeskIndex, rand, seatOf, step, wake, workingCount, type Agent } from './sim';
 
 const SCALE = 4; // 캔버스 내부 해상도 배율 (CSS로 화면 폭에 맞춘다)
@@ -77,9 +77,11 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
     let acc = 0;
     let frame = 0;
     let lastWorking = -1;
+    let clock = 0;
     const loop = (now: number) => {
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
+      clock += dt;
       acc += dt;
       if (acc > 0.25) {
         acc = 0;
@@ -90,7 +92,8 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
 
       const night = isNight();
       c.setTransform(SCALE, 0, 0, SCALE, 0, 0);
-      drawRoom(c, night, false);
+      c.clearRect(0, 0, W, H);
+      drawRoom(c, night, false, clock);
 
       const occupants = new Map<number, Agent>();
       for (const a of agents.current) {
@@ -103,13 +106,17 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
         drawDesk(c, d.x, d.y, !!working, night, frame, i === myDesk);
       });
 
-      // 사람들: 아래쪽에 있는 사람이 앞에 보이도록 y순으로
+      // 사람과 의자: 아래쪽에 있는 것이 앞에 보이도록 y순으로. 의자 등받이는 앉은 사람 위에 덮는다.
       const me = seatOf(DESKS[myDesk]);
-      const people: { y: number; draw: () => void }[] = [
+      const items: { y: number; draw: () => void }[] = [
         {
           y: me.y,
           draw: () => drawPerson(c, me.x, me.y, LOOKS.me, 'sit', meTyping.current > 0 ? frame : 0),
         },
+        ...DESKS.map((d) => {
+          const seat = seatOf(d);
+          return { y: seat.y + 0.5, draw: () => drawChair(c, seat.x, seat.y) };
+        }),
         ...agents.current.map((a) => ({
           y: a.pos.y,
           draw: () => {
@@ -119,11 +126,14 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
           },
         })),
       ];
-      people.sort((p, q) => p.y - q.y).forEach((p) => p.draw());
+      items.sort((p, q) => p.y - q.y).forEach((p) => p.draw());
 
       // 내 머리 위 표시
+      c.fillStyle = '#3b2a30';
+      c.fillRect(me.x - 3, me.y - 25, 6, 5);
       c.fillStyle = '#ffd84d';
-      c.fillRect(me.x - 2, me.y - 22, 4, 3);
+      c.fillRect(me.x - 2, me.y - 24, 4, 3);
+      c.fillRect(me.x - 1, me.y - 21, 2, 1);
 
       // 떠오르는 글자
       c.font = 'bold 7px sans-serif';

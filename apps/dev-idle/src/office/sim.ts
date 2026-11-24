@@ -31,8 +31,8 @@ export const COFFEE_SPOTS: Point[] = [
   { x: 132, y: 40 },
 ];
 export const SOFA_SPOTS: Point[] = [
-  { x: 136, y: 130 },
-  { x: 148, y: 130 },
+  { x: 134, y: 128 },
+  { x: 147, y: 128 },
 ];
 const WALK_SPEED = 22; // px/초
 
