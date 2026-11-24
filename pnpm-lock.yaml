@@ -54,6 +54,61 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0))
 
+  apps/matchum:
+    dependencies:
+      '@apps-in-toss/web-framework':
+        specifier: ^3.11.0
+        version: 3.11.0(typanion@3.14.0)(typescript@7.0.2)
+      '@emotion/react':
+        specifier: ^11.14.0
+        version: 11.14.0(@types/react@18.3.31)(react@18.3.1)
+      '@toss/tds-mobile':
+        specifier: ^2.5.1
+        version: 2.5.1(@emotion/react@11.14.0(@types/react@18.3.31)(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@toss/tds-mobile-ait':
+        specifier: ^2.5.1
+        version: 2.5.1(@apps-in-toss/web-framework@3.11.0(typanion@3.14.0)(typescript@7.0.2))(@emotion/react@11.14.0(@types/react@18.3.31)(react@18.3.1))(@toss/tds-mobile@2.5.1(@emotion/react@11.14.0(@types/react@18.3.31)(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      daily-kit:
+        specifier: workspace:*
+        version: link:../../packages/daily-kit
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      zustand:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/react@18.3.31)(react@18.3.1)
+    devDependencies:
+      '@apps-in-toss/devtools':
+        specifier: ^3.11.0
+        version: 3.11.0(@apps-in-toss/web-framework@3.11.0(typanion@3.14.0)(typescript@7.0.2))(rolldown@1.2.19)(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0))
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      '@types/react':
+        specifier: ^18.3.31
+        version: 18.3.31
+      '@types/react-dom':
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@18.3.31)
+      '@vitejs/plugin-react':
+        specifier: ^6.1.2
+        version: 6.3.0(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0))
+      oxlint:
+        specifier: ^1.90.0
+        version: 1.95.0
+      typescript:
+        specifier: ~7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.8(@types/node@24.19.2)(jiti@2.7.0)
+      vitest:
+        specifier: ^5.1.1
+        version: 5.1.1(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0))
+
   apps/saja:
     dependencies:
       '@apps-in-toss/web-framework':
@@ -105,6 +160,21 @@ importers:
       vitest:
         specifier: ^5.1.1
         version: 5.1.1(@types/node@24.19.2)(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0))
+
+  packages/daily-kit:
+    devDependencies:
+      '@apps-in-toss/web-framework':
+        specifier: ^3.11.0
+        version: 3.11.0(typanion@3.14.0)(typescript@7.0.2)
+      '@types/react':
+        specifier: ^18.3.31
+        version: 18.3.31
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      zustand:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/react@18.3.31)(react@18.3.1)
 
   packages/dev-idle-core: {}
 
