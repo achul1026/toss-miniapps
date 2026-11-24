@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { HIRES, linesPerTap, rankIndex } from 'dev-idle-core';
 import { useGame } from '../game';
 import { won } from '../lib/format';
-import { drawAuditNote, drawBug, drawChair, drawDesk, drawPerson, drawRoom, H, LOOKS, W, type Pose } from './art';
+import { officeLevel, drawAuditNote, drawBug, drawChair, drawDesk, drawPerson, drawRoom, H, LOOKS, W, type Pose } from './art';
 import { cheerAll, DESKS, makeAgent, myDeskIndex, rand, seatOf, step, wake, workingCount, type Agent } from './sim';
 
 const SCALE = 4; // 캔버스 내부 해상도 배율 (CSS로 화면 폭에 맞춘다)
@@ -41,6 +41,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
   const { tap, bonus, hitEvent } = useGame();
   const rank = rankIndex(s.delivered);
   const myDesk = myDeskIndex(rank);
+  const level = officeLevel(rank);
   const roles = teamRoles(s.hires).join(',');
 
   // 팀 구성이나 내 자리가 바뀌면 자리 배치를 다시 한다 (이미 있는 사람은 그대로)
@@ -98,7 +99,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
       const outage = ev?.kind === 'outage';
       c.setTransform(SCALE, 0, 0, SCALE, 0, 0);
       c.clearRect(0, 0, W, H);
-      drawRoom(c, night, outage, clock);
+      drawRoom(c, night, outage, clock, level);
 
       const occupants = new Map<number, Agent>();
       for (const a of agents.current) {
@@ -108,7 +109,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
       DESKS.forEach((d, i) => {
         const occ = occupants.get(i);
         const working = i === myDesk ? meTyping.current > 0 : occ?.activity === 'work';
-        drawDesk(c, d.x, d.y, !!working, night, frame, i === myDesk, i === 1 || i === 6, outage);
+        drawDesk(c, d.x, d.y, !!working, night, frame, i === myDesk, i === 1 || i === 6, outage, level);
       });
 
       // 사람과 의자: 아래쪽에 있는 것이 앞에 보이도록 y순으로. 의자 등받이는 앉은 사람 위에 덮는다.
@@ -167,7 +168,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [myDesk, onWorkingChange]);
+  }, [myDesk, level, onWorkingChange]);
 
   const onPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const el = e.currentTarget.getBoundingClientRect();

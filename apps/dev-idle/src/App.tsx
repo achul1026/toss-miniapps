@@ -17,6 +17,7 @@ import {
 import { useGame } from './game';
 import { duration, won } from './lib/format';
 import { OfficeScene } from './office/OfficeScene';
+import { officeLevel, THEMES } from './office/art';
 import { adReady, onAdReady, preloadRewarded, showRewarded } from './lib/ads';
 import { buy, CATALOG, iapSupported, loadPrices } from './lib/shop';
 import { isMuted, onMutedChange, setMuted, sfx } from './lib/sound';
@@ -182,8 +183,9 @@ function Office() {
   const [promoted, setPromoted] = useState<string | null>(null);
   useEffect(() => {
     if (rank > prevRank.current) {
-      setPromoted(RANKS[rank]);
-      const t = window.setTimeout(() => setPromoted(null), 2600);
+      const moved = officeLevel(rank) > officeLevel(prevRank.current);
+      setPromoted(`${RANKS[rank]}(으)로 승진했어요${moved ? `. 사무실을 ${THEMES[officeLevel(rank)].name}(으)로 옮겼어요` : ''}`);
+      const t = window.setTimeout(() => setPromoted(null), moved ? 3600 : 2600);
       prevRank.current = rank;
       return () => window.clearTimeout(t);
     }
@@ -277,7 +279,7 @@ function Office() {
 
       {promoted && (
         <div className="toast" role="status">
-          {promoted}(으)로 승진했어요
+          {promoted}
         </div>
       )}
     </div>
@@ -290,6 +292,7 @@ function Office2() {
   const [team, setTeam] = useState({ working: 0, total: 0 });
   const onWorkingChange = useCallback((working: number, total: number) => setTeam({ working, total }), []);
   const hidden = Object.values(s.hires).reduce((a, b) => a + b, 0) - team.total;
+  const place = THEMES[officeLevel(rankIndex(s.delivered))].name;
   return (
     <section className="office-scene" aria-label="사무실">
       <OfficeScene onWorkingChange={onWorkingChange} />
@@ -297,7 +300,7 @@ function Office2() {
         <span>{CODE[taps % CODE.length]}</span>
       </p>
       <p className="scene-note">
-        {team.total > 0 ? `팀원 ${team.total}명 중 ${team.working}명 일하는 중` : '사무실을 눌러 코딩해요'}
+        {place} · {team.total > 0 ? `팀원 ${team.total}명 중 ${team.working}명 일하는 중` : '사무실을 눌러 코딩해요'}
         {hidden > 0 ? ` · 다른 층에 ${hidden}명 더` : ''}
       </p>
     </section>
