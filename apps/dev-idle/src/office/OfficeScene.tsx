@@ -1,3 +1,4 @@
+import { sfx } from '../lib/sound';
 import { useEffect, useRef } from 'react';
 import { HIRES, linesPerTap, rankIndex } from 'dev-idle-core';
 import { useGame } from '../game';
@@ -174,6 +175,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
     const y = ((e.clientY - el.top) / el.height) * H;
     // 이벤트 대상(버그·포스트잇)을 먼저 처리
     if (hitEvent(x, y)) {
+      sfx.pop();
       floats.current.push({ x, y: y - 6, text: '처리!', t: 0.9, color: '#e2483d' });
       return;
     }
@@ -182,10 +184,12 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
     if (sleeper && wake(sleeper)) {
       const gain = linesPerTap(useGame.getState().s) * 10;
       bonus(gain);
+      sfx.pop();
       floats.current.push({ x: sleeper.pos.x, y: sleeper.pos.y - 14, text: `깼다! +${won(gain)}`, t: 1.4, color: '#2f6fed' });
       return;
     }
     tap();
+    sfx.tap();
     meTyping.current = 0.6;
     const me = seatOf(DESKS[myDesk]);
     floats.current.push({ x: me.x + (Math.random() * 10 - 5), y: me.y - 24, text: `+${won(linesPerTap(useGame.getState().s))}`, t: 1, color: '#c98a00' });

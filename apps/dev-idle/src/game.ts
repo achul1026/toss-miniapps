@@ -41,6 +41,7 @@ interface Saved {
   savedAt: number;
   perks?: Perks;
   granted?: string[]; // 지급 끝난 주문 번호 (중복 지급 방지)
+  tips?: string[]; // 다 본 안내 말풍선
 }
 
 async function load(): Promise<Saved | null> {
@@ -57,8 +58,8 @@ async function load(): Promise<Saved | null> {
   }
 }
 
-async function save(state: State, perks: Perks, granted: string[]) {
-  const text = JSON.stringify({ state, savedAt: Date.now(), perks, granted: granted.slice(-200) } satisfies Saved);
+async function save(g: { s: State; perks: Perks; granted: string[]; tips: string[] }) {
+  const text = JSON.stringify({ state: g.s, savedAt: Date.now(), perks: g.perks, granted: g.granted.slice(-200), tips: g.tips } satisfies Saved);
   try {
     await Storage.setItem(KEY, text);
   } catch {
@@ -107,6 +108,9 @@ interface Game {
   grant: (sku: SkuId, orderId: string) => boolean;
   doubleOffline: () => void; // 광고 보고 자리 비운 수익 2배
   answerEventBoosted: () => void; // 광고 보고 야근 4배
+  // 안내
+  tips: string[];
+  seeTips: (ids: string[]) => void;
 }
 
 export const useGame = create<Game>((set, get) => ({
@@ -121,10 +125,16 @@ export const useGame = create<Game>((set, get) => ({
   perks: { macbook: false },
   granted: [],
   offlineDoubled: false,
+  tips: [],
+  seeTips: (ids) => {
+    const tips = [...new Set([...get().tips, ...ids])];
+    if (tips.length !== get().tips.length) set({ tips });
+  },
   perkX: () => (get().perks.macbook ? 2 : 1),
   init: async () => {
     const saved = await load();
     if (saved?.perks) set({ perks: saved.perks, granted: saved.granted ?? [] });
+    if (saved?.tips) set({ tips: saved.tips });
     // 지급 못 한 주문, 맥북 구매 내역 복원 (토스 앱에서만 동작)
     void recoverPending((sku, id) => get().grant(sku, id));
     void ownsMacbook().then((owns) => {
@@ -243,12 +253,11 @@ export const useGame = create<Game>((set, get) => ({
     if (gain <= 0) return;
     const next = newState(s.career + gain);
     set({ s: next });
-    await save(next, get().perks, get().granted);
+    await save({ ...get(), s: next });
   },
   dismissOffline: () => set({ offline: null, offlineDoubled: false }),
   persist: () => {
-    const g = get();
-    void save(g.s, g.perks, g.granted);
+    void save(get());
   },
   grant: (sku, orderId) => {
     const g = get();
@@ -267,7 +276,7 @@ export const useGame = create<Game>((set, get) => ({
     }
     const granted = [...g.granted, orderId];
     set({ s, perks, granted, notice });
-    void save(s, perks, granted);
+    void save({ ...get(), s, perks, granted });
     return true;
   },
   doubleOffline: () => {

@@ -37,6 +37,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .badge { display: flex; align-items: baseline; gap: 8px; }
 .rank { background: var(--postit); color: var(--ink); font-weight: 800; padding: 4px 10px; border-radius: 4px; transform: rotate(-1.5deg); display: inline-block; box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08); }
 .career { color: var(--muted); font-size: 14px; }
+.top { gap: 10px; }
+.top .badge { flex: 1; }
+.sound { width: 44px; height: 44px; border-radius: 10px; color: var(--muted); display: grid; place-items: center; }
+.sound[aria-pressed='true'] { color: var(--ink); }
 .money { text-align: right; line-height: 1.2; }
 .money-label { display: block; font-size: 12px; color: var(--muted); }
 .money strong { font-size: 22px; font-variant-numeric: tabular-nums; }
@@ -135,3 +139,16 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .away-buttons { display: flex; flex-direction: column; gap: 6px; }
 .small.ad, .ad-wide { background: #e8effd; color: var(--blue); border: 1px solid #c6d6fa; font-weight: 700; }
 .ad-wide { min-height: 46px; border-radius: 12px; margin-top: 4px; }
+
+/* 안내 말풍선: 포스트잇 메모처럼, 화면을 가리지 않고 흐름 안에 */
+.coach { position: relative; background: var(--postit); color: var(--ink); border-radius: 10px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08); }
+.coach p { flex: 1; font-size: 15px; line-height: 1.5; word-break: keep-all; font-weight: 600; }
+.coach button { background: rgba(255, 255, 255, 0.7); border-radius: 8px; padding: 8px 12px; min-height: 44px; font-weight: 700; white-space: nowrap; }
+.coach::after { content: ''; position: absolute; width: 14px; height: 14px; background: var(--postit); transform: rotate(45deg); }
+.coach-up::after { top: -6px; left: 50%; margin-left: -7px; }
+.coach-down::after { bottom: -6px; left: var(--arrow); margin-left: -7px; }
+.tab.hint { color: var(--ink); box-shadow: inset 0 0 0 2px var(--postit); background: #fffbe8; }
+@media (prefers-reduced-motion: no-preference) {
+  .tab.hint { animation: hint 1.2s ease-in-out infinite; }
+  @keyframes hint { 50% { box-shadow: inset 0 0 0 3px #f2c94c; } }
+}

@@ -19,6 +19,8 @@ import { duration, won } from './lib/format';
 import { OfficeScene } from './office/OfficeScene';
 import { adReady, onAdReady, preloadRewarded, showRewarded } from './lib/ads';
 import { buy, CATALOG, iapSupported, loadPrices } from './lib/shop';
+import { isMuted, onMutedChange, setMuted, sfx } from './lib/sound';
+import { finishedTips, nextTip, type Tip } from './tutorial';
 
 // 보상형 광고가 준비됐는지 화면에서 쓰는 훅
 function useAdReady() {
@@ -67,6 +69,73 @@ const CODE = [
 ];
 
 type Tab = 'hire' | 'gear' | 'resign' | 'shop';
+const TABS: [Tab, string][] = [
+  ['hire', '팀원 채용'],
+  ['gear', '장비'],
+  ['resign', '이직'],
+  ['shop', '상점'],
+];
+
+// 게임 상태가 바뀔 때 효과음 (탭·깨우기·버그 잡기 소리는 사무실 화면에서 낸다)
+function useSounds() {
+  useEffect(
+    () =>
+      useGame.subscribe((g, prev) => {
+        const total = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0);
+        if (rankIndex(g.s.delivered) > rankIndex(prev.s.delivered)) sfx.promote();
+        else if (g.s.delivered > prev.s.delivered && g.s.career === prev.s.career) sfx.deliver();
+        if (total(g.s.hires) > total(prev.s.hires) || total(g.s.gears) > total(prev.s.gears)) sfx.buy();
+        if (g.event && !prev.event) sfx.alert();
+      }),
+    [],
+  );
+}
+
+function SoundToggle() {
+  const [muted, set] = useState(isMuted());
+  useEffect(() => onMutedChange(set) as () => void, []);
+  return (
+    <button className="sound" aria-label={muted ? '소리 켜기' : '소리 끄기'} aria-pressed={!muted} onClick={() => setMuted(!muted)}>
+      <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" shapeRendering="crispEdges">
+        <path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor" />
+        {muted ? (
+          <path d="M11 6l4 4M15 6l-4 4" stroke="currentColor" strokeWidth="1.6" />
+        ) : (
+          <path d="M11 5.5q2 2.5 0 5M13 4q3.5 4 0 8" stroke="currentColor" strokeWidth="1.4" fill="none" />
+        )}
+      </svg>
+    </button>
+  );
+}
+
+// 안내 말풍선
+function useTip(): [Tip | null, () => void] {
+  const s = useGame((g) => g.s);
+  const tips = useGame((g) => g.tips);
+  const event = useGame((g) => g.event);
+  const offline = useGame((g) => g.offline);
+  const seeTips = useGame((g) => g.seeTips);
+  useEffect(() => {
+    const done = finishedTips(s, tips);
+    if (done.length) seeTips(done);
+  }, [s, tips, seeTips]);
+  const tip = event || offline ? null : nextTip(s, tips);
+  return [tip, () => tip && seeTips([tip.id])];
+}
+
+function Coach({ tip, onOk }: { tip: Tip; onOk: () => void }) {
+  const col = TABS.findIndex(([id]) => id === tip.target);
+  return (
+    <div
+      className={col >= 0 ? 'coach coach-down' : 'coach coach-up'}
+      style={col >= 0 ? ({ '--arrow': `${((col + 0.5) / TABS.length) * 100}%` } as React.CSSProperties) : undefined}
+      role="note"
+    >
+      <p>{tip.text}</p>
+      <button onClick={onOk}>알겠어요</button>
+    </div>
+  );
+}
 
 export default function App() {
   const { ready, init, tick, persist } = useGame();
@@ -99,9 +168,11 @@ export default function App() {
 }
 
 function Office() {
-  const { s, offline, dismissOffline, doubleOffline, offlineDoubled, perkX } = useGame();
+  const { s, offline, dismissOffline, doubleOffline, offlineDoubled, perkX, seeTips } = useGame();
   const ad = useAdReady();
   const [tab, setTab] = useState<Tab>('hire');
+  const [tip, okTip] = useTip();
+  useSounds();
   const rank = rankIndex(s.delivered);
   const p = project(s.delivered);
   const progress = Math.min(1, s.lines / p.lines);
@@ -126,6 +197,7 @@ function Office() {
           <span className="rank">{RANKS[rank]}</span>
           {s.career > 0 && <span className="career">경력 {s.career}년</span>}
         </div>
+        <SoundToggle />
         <div className="money">
           <span className="money-label">용역비</span>
           <strong>{won(s.fee)}원</strong>
@@ -173,6 +245,7 @@ function Office() {
       </section>
 
       <Office2 />
+      {tip?.target === 'scene' && <Coach tip={tip} onOk={okTip} />}
 
       <EventCard />
 
@@ -180,16 +253,19 @@ function Office() {
         탭 한 번에 {won(linesPerTap(s) * perkX())}줄 · 팀이 초당 {won(linesPerSec(s) * perkX())}줄
       </p>
 
+      {tip && tip.target !== 'scene' && <Coach tip={tip} onOk={okTip} />}
       <nav className="tabs" role="tablist">
-        {(
-          [
-            ['hire', '팀원 채용'],
-            ['gear', '장비'],
-            ['resign', '이직'],
-            ['shop', '상점'],
-          ] as [Tab, string][]
-        ).map(([id, label]) => (
-          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'tab on' : 'tab'} onClick={() => setTab(id)}>
+        {TABS.map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={tab === id}
+            className={`tab${tab === id ? ' on' : ''}${tip?.target === id && tab !== id ? ' hint' : ''}`}
+            onClick={() => {
+              setTab(id);
+              if (id === 'resign' && tip?.id === 'resign') seeTips(['resign']);
+            }}
+          >
             {label}
           </button>
         ))}
