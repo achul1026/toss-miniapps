@@ -101,8 +101,92 @@ const P = {
   coffee: '#6b4430',
 };
 
-/* 방 */
-export function drawRoom(c: Ctx, night: boolean, alarm: boolean, t: number) {
+/* 사무실 단계: 직급이 오르면 더 좋은 곳으로 이사한다 */
+export interface Theme {
+  level: number;
+  name: string; // 화면에 보이는 곳 이름
+  wall: string;
+  wallShade: string;
+  base: string;
+  desk: [string, string, string]; // 상판, 밝은 면, 어두운 면
+  sofa: [string, string, string]; // 기본, 밝은 면, 어두운 면
+  rug: [string, string] | null; // 안, 테두리
+}
+
+export const THEMES: Theme[] = [
+  {
+    level: 0,
+    name: '반지하 사무실',
+    wall: '#d3d6c6',
+    wallShade: '#c1c5b2',
+    base: '#878b7c',
+    desk: ['#9aa3ad', '#b3bbc4', '#747d88'],
+    sofa: ['#9a6b4a', '#b5845f', '#7a5238'],
+    rug: null,
+  },
+  {
+    level: 1,
+    name: '상가 2층 사무실',
+    wall: P.wall,
+    wallShade: P.wallShade,
+    base: P.base,
+    desk: [P.wood, P.woodHi, P.woodDark],
+    sofa: [P.sofa, P.sofaHi, P.sofaDark],
+    rug: [P.rug, P.rugEdge],
+  },
+  {
+    level: 2,
+    name: '강남 빌딩 12층',
+    wall: '#f3f4f6',
+    wallShade: '#e1e4ea',
+    base: '#3e4a63',
+    desk: ['#7a5038', '#94654a', '#573624'],
+    sofa: ['#7d8794', '#98a2ae', '#5f6874'],
+    rug: ['#d9dde4', '#a9b2bf'],
+  },
+  {
+    level: 3,
+    name: '판교 사옥 꼭대기 층',
+    wall: '#f7f6f2',
+    wallShade: '#e6e3db',
+    base: '#2c3140',
+    desk: ['#e4e0d8', '#f6f4ef', '#b9b3a8'],
+    sofa: ['#4f9a7a', '#6db594', '#3a7a5e'],
+    rug: ['#efe1c6', '#c7a777'],
+  },
+];
+
+/** 직급 → 사무실 단계. 인턴·신입 반지하, 주니어·시니어 상가, PL·PM 강남, 리드 아키텍트부터 판교 */
+export function officeLevel(rank: number): number {
+  return rank >= 6 ? 3 : rank >= 4 ? 2 : rank >= 2 ? 1 : 0;
+}
+
+function drawFloor(c: Ctx, level: number) {
+  if (level === 0) {
+    // 콘크리트 타일, 군데군데 금
+    rect(c, 0, 16, W, H - 16, '#bbb6ab');
+    for (let y = 19; y < H; y += 16) rect(c, 0, y, W, 1, '#a7a196');
+    for (let x = 0; x < W; x += 16) rect(c, x, 16, 1, H - 16, '#a7a196');
+    for (const [x, y] of [[37, 60], [38, 61], [39, 61], [101, 98], [102, 99], [102, 100], [61, 134], [62, 133]]) rect(c, x, y, 1, 1, '#958f84');
+    return;
+  }
+  if (level === 2) {
+    // 카펫 타일 체크무늬
+    for (let y = 16; y < H; y += 16)
+      for (let x = 0; x < W; x += 16) rect(c, x, y, 16, 16, ((x + y) / 16) % 2 === 0 ? '#8a95a6' : '#96a0b0');
+    for (let i = 0; i < 90; i++) rect(c, (i * 53) % W, 17 + ((i * 37) % (H - 17)), 1, 1, '#7d889a');
+    return;
+  }
+  if (level === 3) {
+    // 밝은 원목, 세로로 긴 판재
+    rect(c, 0, 16, W, H - 16, '#e6cfa9');
+    for (let x = 0; x < W; x += 8) {
+      rect(c, x, 16, 1, H - 16, '#d3b88f');
+      const off = ((x / 8) % 3) * 17;
+      for (let y = 22 + off; y < H; y += 51) rect(c, x, y, 8, 1, '#d3b88f');
+    }
+    return;
+  }
   // 나무 바닥: 가로 판재, 이음새를 엇갈리게
   rect(c, 0, 16, W, H - 16, P.floor);
   for (let y = 18; y < H; y += 6) {
@@ -110,14 +194,44 @@ export function drawRoom(c: Ctx, night: boolean, alarm: boolean, t: number) {
     const off = (((y - 18) / 6) % 3) * 18;
     for (let x = off; x < W; x += 54) rect(c, x, y, 1, 5, P.floorLine);
   }
-  // 벽, 걸레받이
-  rect(c, 0, 0, W, 18, P.wall);
-  rect(c, 0, 14, W, 2, P.wallShade);
-  rect(c, 0, 16, W, 2, P.base);
-  rect(c, 0, 18, W, 1, P.floorDark);
+}
 
+// 판교 사옥: 통유리 너머 도시
+function drawSkyline(c: Ctx, night: boolean) {
+  rect(c, 5, 1, 106, 14, OUT);
+  rect(c, 6, 2, 104, 12, night ? '#1d2747' : '#a9dcf0');
+  const towers = [[8, 7], [16, 4], [25, 8], [31, 3], [42, 6], [50, 5], [60, 9], [67, 4], [78, 7], [86, 5], [96, 8], [102, 6]];
+  towers.forEach(([x, top], i) => {
+    const w = 6 + (i % 3);
+    rect(c, x, 2 + top, w, 12 - top, night ? '#2e3a63' : '#7fb0c9');
+    if (night) for (let yy = 4 + top; yy < 13; yy += 3) rect(c, x + 1 + (i % 2) * 2, yy, 1, 1, '#f5e9a8');
+  });
+  if (!night) rect(c, 9, 3, 6, 1, '#e3f5fa');
+  for (const x of [32, 58, 84]) rect(c, x, 2, 1, 12, '#5d6577');
+}
+
+/* 방 */
+export function drawRoom(c: Ctx, night: boolean, alarm: boolean, t: number, level = 1) {
+  const th = THEMES[level] ?? THEMES[1];
+  drawFloor(c, level);
+  // 벽, 걸레받이
+  rect(c, 0, 0, W, 18, th.wall);
+  rect(c, 0, 14, W, 2, th.wallShade);
+  rect(c, 0, 16, W, 2, th.base);
+  rect(c, 0, 18, W, 1, level === 1 ? P.floorDark : 'rgba(0,0,0,0.12)');
+
+  if (level === 3) drawSkyline(c, night);
+  // 반지하: 천장 가까이 작은 창, 밖은 길바닥
+  else if (level === 0)
+    for (const wx of [20, 76]) {
+      rect(c, wx - 1, 1, 22, 7, OUT);
+      rect(c, wx, 2, 20, 5, night ? P.glassNight : P.glass);
+      rect(c, wx, 5, 20, 2, night ? '#3a3d48' : '#9a9a92');
+      if (!night) rect(c, wx + 6, 3, 2, 2, '#5b4a44');
+      rect(c, wx - 1, 7, 22, 1, '#6f7366');
+    }
   // 창문 세 개
-  for (const wx of [14, 50, 86]) {
+  else for (const wx of [14, 50, 86]) {
     rect(c, wx - 1, 2, 26, 12, OUT);
     rect(c, wx, 3, 24, 10, P.frame);
     rect(c, wx + 1, 4, 10, 8, night ? P.glassNight : P.glass);
@@ -129,8 +243,21 @@ export function drawRoom(c: Ctx, night: boolean, alarm: boolean, t: number) {
       rect(c, wx + 4, 6, 1, 1, '#f5e9a8');
       rect(c, wx + 19, 8, 1, 1, '#f5e9a8');
     }
-    rect(c, wx - 1, 13, 26, 1, P.woodDark);
+    rect(c, wx - 1, 13, 26, 1, level === 2 ? '#5d6577' : P.woodDark);
   }
+  if (level === 0) {
+    // 벽걸이 달력
+    rect(c, 116, 3, 14, 12, OUT);
+    rect(c, 117, 4, 12, 3, '#e05a4f');
+    rect(c, 117, 7, 12, 7, P.white);
+    for (let i = 0; i < 9; i++) rect(c, 118 + (i % 4) * 3, 8 + Math.floor(i / 4) * 2, 1, 1, '#9aa0a8');
+  } else if (level === 3) {
+    // 대시보드 TV
+    rect(c, 114, 2, 24, 13, OUT);
+    rect(c, 115, 3, 22, 11, '#1e2533');
+    const bars = [3, 5, 4, 7, 6, 8];
+    bars.forEach((b, i) => rect(c, 117 + i * 3, 12 - b, 2, b, i === bars.length - 1 ? P.ledOk : '#5aa9e6'));
+  } else {
   // 화이트보드와 포스트잇
   rect(c, 116, 3, 20, 11, OUT);
   rect(c, 117, 4, 18, 9, P.white);
@@ -138,6 +265,13 @@ export function drawRoom(c: Ctx, night: boolean, alarm: boolean, t: number) {
   rect(c, 119, 8, 6, 1, '#9db3c9');
   rect(c, 130, 5, 3, 3, P.postit);
   rect(c, 126, 9, 3, 3, '#ff9db0');
+  if (level === 2) {
+    // 액자 속 감사패
+    rect(c, 41, 5, 7, 7, OUT);
+    rect(c, 42, 6, 5, 5, '#d9b44a');
+    rect(c, 43, 7, 3, 3, '#f3e3a0');
+  }
+  }
   // 시계
   rect(c, 143, 4, 9, 9, OUT);
   rect(c, 144, 5, 7, 7, P.white);
@@ -149,17 +283,27 @@ export function drawRoom(c: Ctx, night: boolean, alarm: boolean, t: number) {
   if (hand === 3) rect(c, 146, 7, 1, 1, OUT);
 
   // 소파 아래 러그
-  rect(c, 120, 112, 38, 28, P.rugEdge);
-  rect(c, 122, 114, 34, 24, P.rug);
-  for (let x = 124; x < 154; x += 4) rect(c, x, 125, 2, 1, P.rugEdge);
+  if (th.rug) {
+    rect(c, 120, 112, 38, 28, th.rug[1]);
+    rect(c, 122, 114, 34, 24, th.rug[0]);
+    for (let x = 124; x < 154; x += 4) rect(c, x, 125, 2, 1, th.rug[1]);
+  }
 
-  blit(c, SOFA(), 124, 116);
+  blit(c, SOFA(th), 124, 116);
   blit(c, COUNTER(), 126, 18);
   blit(c, RACK(alarm, Math.floor(t * 4) % 2 === 0), 2, 108);
-  blit(c, PLANT(), 100, 120);
-  blit(c, COPIER(Math.floor(t * 2) % 6 === 0), 26, 121);
-  blit(c, BOXES(), 54, 127);
-  blit(c, BIN(), 80, 131);
+  if (level === 0) {
+    // 반지하: 화분 대신 쌓인 박스, 복사기 대신 프린터 한 대
+    blit(c, BOXES(), 26, 127);
+    blit(c, BOXES(), 54, 127);
+    blit(c, BOXES(), 98, 127);
+  } else {
+    blit(c, PLANT(), 100, 120);
+    blit(c, COPIER(Math.floor(t * 2) % 6 === 0), 26, 121);
+    blit(c, BOXES(), 54, 127);
+  }
+  if (level >= 2) blit(c, PLANT(), 78, 120);
+  else blit(c, BIN(), 80, 131);
 
   if (night) {
     c.fillStyle = 'rgba(22, 26, 52, 0.38)';
@@ -167,9 +311,9 @@ export function drawRoom(c: Ctx, night: boolean, alarm: boolean, t: number) {
   }
 }
 
-const SOFA = () =>
+const SOFA = (th: Theme) =>
   sprite(
-    'sofa',
+    `sofa-${th.level}`,
     [
       '.' + rep('o', 30) + '.',
       'o' + rep('H', 30) + 'o',
@@ -185,7 +329,7 @@ const SOFA = () =>
       '.' + rep('o', 30) + '.',
       '..oo' + rep('.', 24) + 'oo..',
     ],
-    { o: OUT, H: P.sofaHi, s: P.sofa, d: P.sofaDark },
+    { o: OUT, H: th.sofa[1], s: th.sofa[0], d: th.sofa[2] },
   );
 
 const COUNTER = () =>
@@ -323,9 +467,9 @@ const BIN = () =>
   );
 
 /* 책상: 비스듬히 위에서 본 책상과 모니터. (x, y)는 책상 상판 왼쪽 위 */
-const DESK = () =>
+const DESK = (th: Theme) =>
   sprite(
-    'desk',
+    `desk-${th.level}`,
     [
       rep('o', 24),
       'o' + rep('w', 22) + 'o',
@@ -340,7 +484,7 @@ const DESK = () =>
       'od' + rep('.', 20) + 'do',
       'oo' + rep('.', 20) + 'oo',
     ],
-    { o: OUT, w: P.wood, W: P.woodHi, d: P.woodDark },
+    { o: OUT, w: th.desk[0], W: th.desk[1], d: th.desk[2] },
   );
 
 const MONITOR = (lit: boolean, alt: boolean, err = false) =>
@@ -386,9 +530,9 @@ const CHAIR = () =>
     { o: OUT, C: '#4a5470', c: '#5d6987', M: P.metalDark },
   );
 
-export function drawDesk(c: Ctx, x: number, y: number, working: boolean, night: boolean, frame: number, mine = false, ramen = false, error = false) {
+export function drawDesk(c: Ctx, x: number, y: number, working: boolean, night: boolean, frame: number, mine = false, ramen = false, error = false, level = 1) {
   shadow(c, x + 12, y + 12, 13);
-  blit(c, DESK(), x, y + 1);
+  blit(c, DESK(THEMES[level] ?? THEMES[1]), x, y + 1);
   blit(c, MONITOR(working || mine, frame % 2 === 1, error && (working || mine)), x + 6, y - 7);
   // 키보드, 머그, 서류
   rect(c, x + 7, y + 4, 10, 2, OUT);

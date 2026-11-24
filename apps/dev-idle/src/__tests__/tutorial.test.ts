@@ -24,3 +24,11 @@ describe('안내 말풍선', () => {
     expect(nextTip(s, ['tap', 'hire', 'nap', 'gear', 'resign'])).toBeNull();
   });
 });
+
+import { officeLevel, THEMES } from '../office/art';
+describe('사무실 단계', () => {
+  it('직급에 따라 반지하 → 상가 → 강남 → 판교', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7].map(officeLevel)).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
+    expect(THEMES.map((t) => t.level)).toEqual([0, 1, 2, 3]);
+  });
+});
