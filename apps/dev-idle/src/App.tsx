@@ -277,6 +277,13 @@ function Office() {
       {tab === 'resign' && <Resign />}
       {tab === 'shop' && <Shop />}
 
+      {import.meta.env.VITE_GAME_RATING && (
+        <p className="rating">
+          {import.meta.env.VITE_GAME_RATING}
+          {import.meta.env.VITE_GAME_RATING_NO ? ` · 등급분류번호 ${import.meta.env.VITE_GAME_RATING_NO}` : ''}
+        </p>
+      )}
+
       {promoted && (
         <div className="toast" role="status">
           {promoted}
