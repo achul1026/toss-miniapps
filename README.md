@@ -16,7 +16,7 @@
 | | 서비스 | 한 줄 소개 | 상태 |
 | :-: | --- | --- | --- |
 | <img src="docs/assets/saja-icon-600.png" width="40" /> | **하루 한 사자성어** <br /><sub>`apps/saja`</sub> | 5060을 위한 하루 1분 사자성어. 배우고, 퀴즈 풀고, 낙관을 찍는다 | 출시 준비 |
-| 🛠 | **SI 개발자 키우기** <br /><sub>`apps/dev-idle`</sub> | 인턴에서 CTO까지, 야근·감리·장애를 버티는 방치형 게임 | 기획 완료 |
+| 🛠 | **SI 개발자 키우기** <br /><sub>`apps/dev-idle`</sub> | 인턴에서 CTO까지, 야근·감리·장애를 버티는 방치형 게임 | MVP 개발 중 |
 
 <p align="center">
   <img src="docs/assets/screenshots/1-home.png" width="200" />
@@ -31,7 +31,7 @@
 toss-miniapps/
 ├─ apps/
 │  ├─ saja/              하루 한 사자성어 (appName: daily-sajaseongeo)
-│  └─ dev-idle/          SI 개발자 키우기 (예정)
+│  └─ dev-idle/          SI 개발자 키우기 (appName: si-dev-idle, 등록 전)
 ├─ content/saja/         사자성어 원고 JSON — 한자, 훈음, 뜻, 이야기, 예문
 ├─ docs/
 │  ├─ saja-console.md    콘솔 등록 문구, 푸시 템플릿, 광고 그룹
