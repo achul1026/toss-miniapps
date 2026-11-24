@@ -7,6 +7,7 @@ import {
   careerFrom,
   costOf,
   linesPerSec,
+  SELF_TAPS_PER_SEC,
   linesPerTap,
   multiplier,
   project,
@@ -180,6 +181,25 @@ function Office() {
   const { s, offline, dismissOffline, doubleOffline, offlineDoubled, perkX, seeTips } = useGame();
   const ad = useAdReady();
   const [tab, setTab] = useState<Tab>('hire');
+  // 업그레이드 화면: 아래에서 올라오는 전체 화면. 뒤로가기(토스·안드로이드)로도 닫힌다.
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onPop = () => setOpen(false);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  const openSheet = (id: Tab) => {
+    setTab(id);
+    if (!open) {
+      window.history.pushState({ sheet: true }, '');
+      setOpen(true);
+    }
+    if (id === 'resign' && tip?.id === 'resign') seeTips(['resign']);
+  };
+  const closeSheet = () => {
+    if ((window.history.state as { sheet?: boolean } | null)?.sheet) window.history.back();
+    else setOpen(false);
+  };
   const [tip, okTip] = useTip();
   useSounds();
   const rank = rankIndex(s.delivered);
@@ -267,43 +287,64 @@ function Office() {
       <EventCard />
 
       <p className="rates">
-        탭 한 번에 {won(linesPerTap(s) * perkX())}줄 · 팀이 초당 {won(linesPerSec(s) * perkX())}줄
+        자동으로 초당 {won(linesPerSec(s) * perkX())}줄 · 누르면 한 번에 {won(linesPerTap(s) * perkX())}줄
       </p>
 
-      {tip && tip.target !== 'scene' && <Coach tip={tip} onOk={okTip} />}
-      <nav className="tabs" role="tablist">
-        {TABS.map(([id, label]) => (
-          <button
-            key={id}
-            role="tab"
-            aria-selected={tab === id}
-            className={`tab${tab === id ? ' on' : ''}${tip?.target === id && tab !== id ? ' hint' : ''}`}
-            onClick={() => {
-              setTab(id);
-              if (id === 'resign' && tip?.id === 'resign') seeTips(['resign']);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-      {tab === 'hire' && <HireList />}
-      {tab === 'gear' && <GearList />}
-      {tab === 'resign' && <Resign />}
-      {tab === 'shop' && <Shop />}
+      <div className="bottom">
+        {tip && tip.target !== 'scene' && <Coach tip={tip} onOk={okTip} />}
+        <nav className="tabs" aria-label="업그레이드">
+          {TABS.map(([id, label]) => (
+            <button key={id} className={`tab${tip?.target === id ? ' hint' : ''}`} onClick={() => openSheet(id)}>
+              {label}
+            </button>
+          ))}
+        </nav>
+        {import.meta.env.VITE_GAME_RATING && (
+          <p className="rating">
+            {import.meta.env.VITE_GAME_RATING}
+            {import.meta.env.VITE_GAME_RATING_NO ? ` · 등급분류번호 ${import.meta.env.VITE_GAME_RATING_NO}` : ''}
+          </p>
+        )}
+      </div>
 
-      {import.meta.env.VITE_GAME_RATING && (
-        <p className="rating">
-          {import.meta.env.VITE_GAME_RATING}
-          {import.meta.env.VITE_GAME_RATING_NO ? ` · 등급분류번호 ${import.meta.env.VITE_GAME_RATING_NO}` : ''}
-        </p>
-      )}
+      {open && <Sheet tab={tab} setTab={(id) => openSheet(id)} onClose={closeSheet} />}
 
       {promoted && (
         <div className="toast" role="status">
           {promoted}
         </div>
       )}
+    </div>
+  );
+}
+
+function Sheet({ tab, setTab, onClose }: { tab: Tab; setTab: (t: Tab) => void; onClose: () => void }) {
+  const fee = useGame((g) => g.s.fee);
+  return (
+    <div className="sheet" role="dialog" aria-modal="true" aria-label="업그레이드">
+      <div className="sheet-head">
+        <p className="sheet-money">
+          용역비 <strong>{won(fee)}원</strong>
+        </p>
+        <button className="sheet-close" aria-label="닫기" onClick={onClose}>
+          <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+            <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+      <nav className="tabs" role="tablist">
+        {TABS.map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'tab on' : 'tab'} onClick={() => setTab(id)}>
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="sheet-body">
+        {tab === 'hire' && <HireList />}
+        {tab === 'gear' && <GearList />}
+        {tab === 'resign' && <Resign />}
+        {tab === 'shop' && <Shop />}
+      </div>
     </div>
   );
 }
@@ -322,7 +363,7 @@ function Office2() {
         <span>{CODE[taps % CODE.length]}</span>
       </p>
       <p className="scene-note">
-        {place} · {team.total > 0 ? `팀원 ${team.total}명 중 ${team.working}명 일하는 중` : '사무실을 눌러 코딩해요'}
+        {place} · {team.total > 0 ? `팀원 ${team.total}명 중 ${team.working}명 일하는 중` : '누르면 더 빨리 코딩해요'}
         {hidden > 0 ? ` · 다른 층에 ${hidden}명 더` : ''}
       </p>
     </section>
@@ -447,7 +488,9 @@ function GearList() {
               <p className="row-name">
                 {g.name} <span className="count">{owned}개</span>
               </p>
-              <p className="row-desc">탭 한 번에 +{won(g.tapBonus * multiplier(s))}줄</p>
+              <p className="row-desc">
+                누를 때 +{won(g.tapBonus * multiplier(s))}줄 · 자동 초당 +{won(g.tapBonus * multiplier(s) * SELF_TAPS_PER_SEC)}줄
+              </p>
             </div>
             <button className="buy" disabled={s.fee < cost} onClick={() => gear(g.id)}>
               {won(cost)}원

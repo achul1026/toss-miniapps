@@ -95,7 +95,17 @@ export function synergy(owned: number): number {
   return Math.pow(2, SYNERGY_AT.filter((n) => owned >= n).length);
 }
 
-export function linesPerSec(s: State): number {
+export function linesPerTap(s: State): number {
+  return (1 + GEARS.reduce((sum, g) => sum + (s.gears[g.id] ?? 0) * g.tapBonus, 0)) * multiplier(s);
+}
+
+// 나는 누르지 않아도 2초에 한 번 누른 만큼 코드를 쓴다. 장비를 사면 이 속도도 같이 오른다.
+export const SELF_TAPS_PER_SEC = 0.5;
+export function selfPerSec(s: State): number {
+  return linesPerTap(s) * SELF_TAPS_PER_SEC;
+}
+
+export function teamPerSec(s: State): number {
   return (
     HIRES.reduce((sum, h) => {
       const owned = s.hires[h.id] ?? 0;
@@ -104,8 +114,9 @@ export function linesPerSec(s: State): number {
   );
 }
 
-export function linesPerTap(s: State): number {
-  return (1 + GEARS.reduce((sum, g) => sum + (s.gears[g.id] ?? 0) * g.tapBonus, 0)) * multiplier(s);
+/** 가만히 있어도 1초에 쌓이는 코드 (나 + 팀) */
+export function linesPerSec(s: State): number {
+  return selfPerSec(s) + teamPerSec(s);
 }
 
 // 코드 줄을 더하고, 요구량을 채운 프로젝트는 납품 처리한다.

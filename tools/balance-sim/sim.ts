@@ -2,13 +2,13 @@
 // 가상의 플레이어가 초당 TAPS번 탭하고, 살 수 있으면 '1용역비당 생산 증가'가 가장 큰 것을 산다.
 import {
   GEARS, HIRES, RANKS, RANK_AT, buyGear, buyHire, careerFrom, costOf, addLines,
-  linesPerSec, linesPerTap, multiplier, newState, rankIndex, synergy, type State,
+  SELF_TAPS_PER_SEC, linesPerSec, linesPerTap, multiplier, newState, rankIndex, synergy, type State,
 } from '../../packages/dev-idle-core/src/economy.ts';
 
 const TAPS = Number(process.env.TAPS ?? 3);
 
 function bestBuy(s: State): State | null {
-  const tapValue = TAPS; // 탭 1줄 = 초당 TAPS줄
+  const tapValue = TAPS + SELF_TAPS_PER_SEC; // 탭 1줄 = 초당 (TAPS + 자동) 줄
   let best: { score: number; next: State } | null = null;
   for (const h of HIRES) {
     const next = buyHire(s, h.id);

@@ -21,14 +21,14 @@ const RULES: Rule[] = [
   {
     id: 'tap',
     target: 'scene',
-    text: '사무실을 누르면 내가 코드를 써요. 진척률을 100%까지 채우면 납품하고 용역비를 받아요.',
+    text: '가만히 있어도 내가 알아서 코드를 써요. 사무실을 누르면 더 빨리 써요. 진척률을 100% 채우면 납품하고 용역비를 받아요.',
     show: () => true,
     done: (s) => s.delivered >= 1,
   },
   {
     id: 'hire',
     target: 'hire',
-    text: `용역비가 모였어요. ${HIRES[0].name}를 채용하면 내가 안 눌러도 알아서 코드를 써요.`,
+    text: `용역비가 모였어요. ${HIRES[0].name}를 채용하면 팀원도 알아서 코드를 써서 훨씬 빨라져요.`,
     show: (s) => s.fee >= HIRES[0].baseCost,
     done: (s) => count(s.hires) > 0,
   },
@@ -42,7 +42,7 @@ const RULES: Rule[] = [
   {
     id: 'gear',
     target: 'gear',
-    text: `${GEARS[0].name}를 사면 한 번 누를 때 쓰는 코드가 늘어요.`,
+    text: `${GEARS[0].name}를 사면 내가 자동으로 쓰는 속도와 누를 때 쓰는 코드가 같이 늘어요.`,
     show: (s) => count(s.hires) > 0 && s.fee >= costOf(GEARS[0].baseCost, s.gears[GEARS[0].id] ?? 0),
     done: (s) => count(s.gears) > 0,
   },
