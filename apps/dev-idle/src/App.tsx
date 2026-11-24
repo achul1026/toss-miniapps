@@ -7,6 +7,7 @@ import {
   careerFrom,
   costOf,
   linesPerSec,
+  SELF_TAPS_PER_SEC,
   linesPerTap,
   multiplier,
   project,
@@ -180,6 +181,21 @@ function Office() {
   const { s, offline, dismissOffline, doubleOffline, offlineDoubled, perkX, seeTips } = useGame();
   const ad = useAdReady();
   const [tab, setTab] = useState<Tab>('hire');
+  const [open, setOpenRaw] = useState(() => {
+    try {
+      return window.localStorage.getItem('dev-idle:panel') === 'open';
+    } catch {
+      return false;
+    }
+  });
+  const setOpen = (v: boolean) => {
+    setOpenRaw(v);
+    try {
+      window.localStorage.setItem('dev-idle:panel', v ? 'open' : 'closed');
+    } catch {
+      /* 저장 불가 */
+    }
+  };
   const [tip, okTip] = useTip();
   useSounds();
   const rank = rankIndex(s.delivered);
@@ -267,7 +283,7 @@ function Office() {
       <EventCard />
 
       <p className="rates">
-        탭 한 번에 {won(linesPerTap(s) * perkX())}줄 · 팀이 초당 {won(linesPerSec(s) * perkX())}줄
+        자동으로 초당 {won(linesPerSec(s) * perkX())}줄 · 누르면 한 번에 {won(linesPerTap(s) * perkX())}줄
       </p>
 
       {tip && tip.target !== 'scene' && <Coach tip={tip} onOk={okTip} />}
@@ -276,21 +292,32 @@ function Office() {
           <button
             key={id}
             role="tab"
-            aria-selected={tab === id}
-            className={`tab${tab === id ? ' on' : ''}${tip?.target === id && tab !== id ? ' hint' : ''}`}
+            aria-selected={open && tab === id}
+            aria-expanded={open && tab === id}
+            className={`tab${open && tab === id ? ' on' : ''}${tip?.target === id && !(open && tab === id) ? ' hint' : ''}`}
             onClick={() => {
-              setTab(id);
+              // 열린 탭을 다시 누르면 접는다
+              if (open && tab === id) setOpen(false);
+              else {
+                setTab(id);
+                setOpen(true);
+              }
               if (id === 'resign' && tip?.id === 'resign') seeTips(['resign']);
             }}
           >
             {label}
           </button>
         ))}
+        <button className="tab fold" aria-label={open ? '목록 접기' : '목록 펼치기'} aria-expanded={open} onClick={() => setOpen(!open)}>
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" shapeRendering="crispEdges">
+            <path d={open ? 'M3 10l5-5 5 5-1.5 1.5L8 8l-3.5 3.5z' : 'M3 6l5 5 5-5-1.5-1.5L8 8 4.5 4.5z'} fill="currentColor" />
+          </svg>
+        </button>
       </nav>
-      {tab === 'hire' && <HireList />}
-      {tab === 'gear' && <GearList />}
-      {tab === 'resign' && <Resign />}
-      {tab === 'shop' && <Shop />}
+      {open && tab === 'hire' && <HireList />}
+      {open && tab === 'gear' && <GearList />}
+      {open && tab === 'resign' && <Resign />}
+      {open && tab === 'shop' && <Shop />}
 
       {import.meta.env.VITE_GAME_RATING && (
         <p className="rating">
@@ -322,7 +349,7 @@ function Office2() {
         <span>{CODE[taps % CODE.length]}</span>
       </p>
       <p className="scene-note">
-        {place} · {team.total > 0 ? `팀원 ${team.total}명 중 ${team.working}명 일하는 중` : '사무실을 눌러 코딩해요'}
+        {place} · {team.total > 0 ? `팀원 ${team.total}명 중 ${team.working}명 일하는 중` : '누르면 더 빨리 코딩해요'}
         {hidden > 0 ? ` · 다른 층에 ${hidden}명 더` : ''}
       </p>
     </section>
@@ -447,7 +474,9 @@ function GearList() {
               <p className="row-name">
                 {g.name} <span className="count">{owned}개</span>
               </p>
-              <p className="row-desc">탭 한 번에 +{won(g.tapBonus * multiplier(s))}줄</p>
+              <p className="row-desc">
+                누를 때 +{won(g.tapBonus * multiplier(s))}줄 · 자동 초당 +{won(g.tapBonus * multiplier(s) * SELF_TAPS_PER_SEC)}줄
+              </p>
             </div>
             <button className="buy" disabled={s.fee < cost} onClick={() => gear(g.id)}>
               {won(cost)}원

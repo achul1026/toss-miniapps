@@ -108,7 +108,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
       }
       DESKS.forEach((d, i) => {
         const occ = occupants.get(i);
-        const working = i === myDesk ? meTyping.current > 0 : occ?.activity === 'work';
+        const working = i === myDesk ? true : occ?.activity === 'work'; // 나는 늘 자동으로 코딩 중
         drawDesk(c, d.x, d.y, !!working, night, frame, i === myDesk, i === 1 || i === 6, outage, level);
       });
 
@@ -117,7 +117,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
       const items: { y: number; draw: () => void }[] = [
         {
           y: me.y,
-          draw: () => drawPerson(c, me.x, me.y, LOOKS.me, 'sit', meTyping.current > 0 ? frame : 0),
+          draw: () => drawPerson(c, me.x, me.y, LOOKS.me, 'sit', meTyping.current > 0 ? frame * 2 : Math.floor(frame / 2)),
         },
         ...DESKS.map((d) => {
           const seat = seatOf(d);

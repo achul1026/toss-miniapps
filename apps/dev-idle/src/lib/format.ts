@@ -15,6 +15,8 @@ export function won(n: number): string {
       return `${x >= 100 ? Math.floor(x).toLocaleString('ko-KR') : x.toFixed(1).replace(/\.0$/, '')}${u}`;
     }
   }
+  // 10 미만 소수는 한 자리까지 (초당 0.5줄 같은 값)
+  if (abs < 10 && !Number.isInteger(n)) return (Math.floor(n * 10) / 10).toString();
   return Math.floor(n).toLocaleString('ko-KR');
 }
 
