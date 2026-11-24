@@ -14,7 +14,7 @@
 pnpm install
 pnpm dev:saja          # 로컬 개발 서버
 pnpm --filter saja test
-pnpm build:saja        # dist/ + haru-saja.ait 생성 → 앱인토스 콘솔에 업로드
+pnpm build:saja        # dist/ + daily-sajaseongeo.ait 생성 → 앱인토스 콘솔에 업로드
 ```
 
 광고 ID는 `apps/saja/.env.example`을 복사해 `.env`로 만들고 콘솔에서 받은 값을 넣는다.
