@@ -1,0 +1,11 @@
+{
+  "name": "toss-miniapps",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev:saja": "pnpm --filter saja dev",
+    "build:saja": "pnpm --filter saja build",
+    "dev:dev-idle": "pnpm --filter dev-idle dev",
+    "build:dev-idle": "pnpm --filter dev-idle build"
+  }
+}
