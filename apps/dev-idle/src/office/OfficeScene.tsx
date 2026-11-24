@@ -103,7 +103,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
       DESKS.forEach((d, i) => {
         const occ = occupants.get(i);
         const working = i === myDesk ? meTyping.current > 0 : occ?.activity === 'work';
-        drawDesk(c, d.x, d.y, !!working, night, frame, i === myDesk);
+        drawDesk(c, d.x, d.y, !!working, night, frame, i === myDesk, i === 1 || i === 6);
       });
 
       // 사람과 의자: 아래쪽에 있는 것이 앞에 보이도록 y순으로. 의자 등받이는 앉은 사람 위에 덮는다.
@@ -122,7 +122,7 @@ export function OfficeScene({ onWorkingChange }: { onWorkingChange?: (working: n
           draw: () => {
             const pose: Pose =
               a.activity === 'work' ? 'sit' : a.activity === 'walk' ? 'walk' : a.activity === 'nap' ? 'sleep' : a.activity === 'coffee' ? 'drink' : 'cheer';
-            drawPerson(c, a.pos.x, a.pos.y, LOOKS[a.role] ?? LOOKS.junior, pose, frame, a.facing);
+            drawPerson(c, a.pos.x, a.pos.y, LOOKS[a.role] ?? LOOKS.junior, pose, frame, a.facing, a.dir, a.id.length * 3 + a.seat.x);
           },
         })),
       ];
