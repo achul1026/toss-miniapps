@@ -152,3 +152,5 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   .tab.hint { animation: hint 1.2s ease-in-out infinite; }
   @keyframes hint { 50% { box-shadow: inset 0 0 0 3px #f2c94c; } }
 }
+
+.rating { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 4px; }
