@@ -1,0 +1,136 @@
+/*
+  하루 한 영어 한마디 — 탑승권과 여권 도장. 하늘색 바탕, 남색 탑승권, 파란 잉크 도장.
+  파란 잉크(--stamp)는 도장에만 쓴다. 영어 문장은 읽기 쉬운 Lexend.
+  5060 기준 본문 19px, 터치 영역 56px 이상.
+*/
+:root {
+  --sky: #eaf1f8;
+  --paper: #ffffff;
+  --navy: #1b2f55; /* 흰 글씨 대비 13:1 */
+  --navy-wash: #dde7f3;
+  --ink: #172033;
+  --ink-soft: #56627a;
+  --line: #d3ddea;
+  --stamp: #2d5bb5;
+  --right: #2f7d4f;
+  --wrong: #c0322a;
+  --en: 'Lexend', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-family: var(--sans);
+  font-size: 19px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--sky);
+  -webkit-text-size-adjust: 100%;
+}
+* { box-sizing: border-box; }
+body { margin: 0; touch-action: manipulation; }
+p { margin: 0; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--stamp); outline-offset: 3px; border-radius: 6px; }
+
+.page { max-width: 520px; margin: 0 auto; padding: 28px 22px 56px; display: flex; flex-direction: column; gap: 20px; }
+.center { align-items: center; justify-content: center; min-height: 60vh; color: var(--ink-soft); }
+.date { font-size: 17px; color: var(--ink-soft); }
+
+/* 탑승권 */
+.pass { background: var(--paper); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 0 var(--line); }
+.pass-head { display: flex; justify-content: space-between; background: var(--navy); color: #fff; padding: 12px 20px; font-size: 16px; font-weight: 700; letter-spacing: 0.02em; }
+.pass-body { position: relative; padding: 22px 20px 26px; display: flex; flex-direction: column; gap: 10px; min-height: 250px; }
+.pass-when { font-size: 16px; color: var(--ink-soft); }
+.pass-en { font-family: var(--en); font-weight: 700; font-size: 34px; line-height: 1.25; color: var(--navy); word-break: keep-all; }
+.pass-ko { font-size: 20px; color: var(--ink-soft); word-break: keep-all; }
+.pass-body .stamp { position: absolute; right: 16px; bottom: 14px; }
+/* 절취선: 양옆 반원 홈 + 점선 */
+.pass-stub { position: relative; border-top: 2px dashed var(--line); padding: 14px 20px; font-size: 17px; font-weight: 700; color: var(--navy); }
+.pass-stub::before, .pass-stub::after { content: ''; position: absolute; top: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--sky); }
+.pass-stub::before { left: -11px; }
+.pass-stub::after { right: -11px; }
+
+/* 여권 도장 */
+.stamp {
+  width: 104px; height: 104px; border-radius: 50%;
+  border: 3px solid var(--stamp); outline: 2px solid var(--stamp); outline-offset: -9px;
+  color: var(--stamp); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transform: rotate(-10deg); background: rgba(255, 255, 255, 0.86); line-height: 1.1;
+}
+.stamp-top { font-size: 11px; font-weight: 700; }
+.stamp-mid { font-size: 26px; font-weight: 900; letter-spacing: 0.08em; }
+.stamp-date { font-family: var(--en); font-size: 13px; font-weight: 700; }
+.result .stamp { width: 150px; height: 150px; border-width: 5px; outline-width: 3px; outline-offset: -13px; }
+.result .stamp-top { font-size: 15px; }
+.result .stamp-mid { font-size: 40px; }
+.result .stamp-date { font-size: 18px; }
+@media (prefers-reduced-motion: no-preference) {
+  .stamp-press { animation: press 420ms cubic-bezier(0.2, 0.8, 0.3, 1.2) both; }
+  @keyframes press {
+    from { opacity: 0; transform: scale(1.6) rotate(-24deg); }
+    to { opacity: 1; transform: scale(1) rotate(-10deg); }
+  }
+}
+
+/* 버튼 */
+.primary { background: var(--navy); color: #fff; font-size: 20px; font-weight: 700; min-height: 60px; border-radius: 14px; padding: 0 20px; }
+.primary:active { filter: brightness(1.15); }
+.quiet { color: var(--navy); font-weight: 700; font-size: 19px; min-height: 56px; border-radius: 14px; background: var(--navy-wash); }
+.quiet:disabled { opacity: 0.55; }
+.listen { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border-radius: 24px; background: var(--navy-wash); color: var(--navy); font-weight: 700; font-size: 17px; }
+
+/* 배우기 */
+.learn-head { display: flex; flex-direction: column; gap: 6px; }
+.learn-en { font-family: var(--en); font-weight: 700; font-size: 36px; line-height: 1.25; color: var(--navy); }
+.learn-say { font-size: 20px; color: var(--stamp); font-weight: 700; }
+.learn-ko { font-size: 22px; font-weight: 700; word-break: keep-all; margin-bottom: 6px; }
+.section h2 { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
+.section p { word-break: keep-all; }
+.talk { display: flex; flex-direction: column; gap: 10px; }
+.bubble { max-width: 88%; padding: 12px 16px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px; }
+.bubble p[lang='en'] { font-family: var(--en); font-weight: 500; font-size: 20px; line-height: 1.35; }
+.bubble-ko { font-size: 16px; color: var(--ink-soft); }
+.bubble.me { align-self: flex-end; background: var(--navy); color: #fff; border-bottom-right-radius: 4px; }
+.bubble.me .bubble-ko { color: #c9d6ea; }
+.bubble.you { align-self: flex-start; background: var(--paper); border-bottom-left-radius: 4px; }
+.bubble .listen { margin-top: 6px; min-height: 44px; }
+
+/* 퀴즈 */
+.progress { display: flex; gap: 6px; }
+.progress span { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+.progress span.on { background: var(--navy); }
+.prompt { font-size: 24px; font-weight: 800; margin: 0; word-break: keep-all; line-height: 1.4; }
+.given { font-family: var(--en); font-weight: 700; font-size: 26px; color: var(--navy); line-height: 1.35; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.options { display: flex; flex-direction: column; gap: 10px; }
+.option { text-align: left; background: var(--paper); border: 2px solid var(--line); border-radius: 12px; padding: 16px 18px; font-size: 20px; min-height: 64px; word-break: keep-all; }
+.option.opt-en { font-family: var(--en); font-weight: 500; font-size: 20px; }
+.option.right { border-color: var(--right); background: #e9f4ee; }
+.option.wrong { border-color: var(--wrong); background: #fbeaea; }
+.option.dim { color: var(--ink-soft); }
+.feedback { display: flex; flex-direction: column; gap: 4px; word-break: keep-all; }
+.feedback-title { font-size: 21px; font-weight: 800; }
+.feedback.ok .feedback-title { color: var(--right); }
+.feedback.no .feedback-title { color: var(--wrong); }
+
+/* 결과 */
+.result { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px 0 8px; text-align: center; }
+.result .score { font-size: 24px; font-weight: 800; }
+.result .note { color: var(--ink-soft); word-break: keep-all; }
+
+/* 기록 */
+.h2 { font-size: 22px; font-weight: 800; margin: 8px 0 0; }
+.weekdays, .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.weekdays span { text-align: center; font-size: 15px; color: var(--ink-soft); }
+.day { aspect-ratio: 1; display: grid; place-items: center; font-size: 16px; color: var(--ink-soft); border-radius: 50%; }
+.day.done { color: var(--stamp); font-weight: 900; border: 2px solid var(--stamp); }
+.day.today { box-shadow: inset 0 0 0 2px var(--line); }
+.wrong-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.wrong-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 2px; border-bottom: 1px solid var(--line); }
+.wrong-row .w { font-family: var(--en); font-weight: 700; font-size: 19px; color: var(--navy); }
+.wrong-row p { color: var(--ink-soft); font-size: 16px; word-break: keep-all; }
+.small { color: var(--navy); font-weight: 700; font-size: 16px; padding: 10px 12px; min-height: 44px; white-space: nowrap; }
+.empty { color: var(--ink-soft); }
+.banner { width: 100%; }
+
+/* 알림 제안 */
+.reminder { display: flex; flex-direction: column; gap: 6px; padding: 18px 0 4px; border-top: 1px solid var(--line); }
+.reminder-title { font-size: 21px; font-weight: 800; }
+.reminder-body { color: var(--ink-soft); word-break: keep-all; margin-bottom: 8px; }
+.pass-body:has(.stamp) .pass-ko { padding-right: 112px; }
